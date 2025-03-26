@@ -135,10 +135,23 @@ with tab1:
     plt.xticks(rotation=45)
     st.pyplot(fig2)
 
-with tab2:
+import streamlit as st
+import pdfplumber
+import fitz  # PyMuPDF for PDF manipulation
+import tempfile
+import os
+import json
+import re
+import google.generativeai as genai
+from datetime import datetime
+
+# Assuming this is inside a tab (e.g., tab2) as per your context
+with st.tab2:  # Replace 'tab2' with your actual tab variable if different
     st.subheader("ResumeFlow 📝")
 
-    # Functions
+    # --- Function Definitions ---
+
+    # Function to get AI response from Gemini model
     def get_gemini_response(input_prompt):
         try:
             model = genai.GenerativeModel("gemini-1.5-pro-latest")
@@ -147,161 +160,150 @@ with tab2:
                 st.error("AI response is empty. Please try again.")
                 return None
             ai_text = response.text.strip()
+            # Extract JSON from the response
             json_match = re.search(r"\{.*\}", ai_text, re.DOTALL)
             if json_match:
                 clean_json = json_match.group(0)
-                return json.loads(clean_json) if isinstance(clean_json, str) else clean_json
-            return ai_text
-        except json.JSONDecodeError:
-            st.error("Error parsing AI's JSON response. Please try again.")
+                return json.loads(clean_json)
+            st.error("AI did not return a valid JSON response.")
             return None
         except Exception as e:
-            st.error(f"Unexpected error: {str(e)}")
+            st.error(f"Error with AI response: {str(e)}")
             return None
 
+    # Function to extract text from the uploaded resume PDF
     def extract_text_with_layout(uploaded_file):
         text = ""
         with pdfplumber.open(uploaded_file) as pdf:
             for page in pdf.pages:
-                text += page.extract_text() + "\n"
-        return text
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        return text if text else "No text extracted from resume."
 
-    def add_text_to_pdf(input_pdf, report_text):
+    # Function to create a new PDF report (not modifying the resume)
+    def create_report_pdf(candidate_name, report_text):
         try:
-            pdf_doc = fitz.open(input_pdf)
-            last_page = pdf_doc[-1]
-            page_width = last_page.rect.width
-            page_height = last_page.rect.height
-            text_rect = fitz.Rect(50, page_height - 200, page_width - 50, page_height - 20)
-            
-            if last_page.get_textbox(text_rect):
-                last_page = pdf_doc.new_page()
-                text_rect = fitz.Rect(50, 50, page_width - 50, page_height - 50)
-            
-            last_page.insert_textbox(
-                text_rect,
-                report_text,
-                fontsize=12,
-                fontname="helv",
-                color=(0, 0, 0),
-                align=0
-            )
-            
+            # Create a new PDF document
+            pdf_doc = fitz.open()
+            new_page = pdf_doc.new_page()  # Add a new page (A4 size: 595x842 points)
+            page_width = new_page.rect.width
+            page_height = new_page.rect.height
+
+            # Define rectangles for header, body, and footer
+            header_rect = fitz.Rect(50, 50, page_width - 50, 100)  # Top section for header
+            body_rect = fitz.Rect(50, 120, page_width - 50, page_height - 50)  # Middle section for report
+            footer_rect = fitz.Rect(50, page_height - 30, page_width - 50, page_height - 10)  # Bottom for footer
+
+            # Add header with candidate's name
+            header_text = f"Candidate Match Report for {candidate_name}"
+            new_page.insert_textbox(header_rect, header_text, fontsize=16, fontname="helv", align=1)  # Center-aligned
+
+            # Add report body with proper spacing (handled by \n\n in report_text)
+            new_page.insert_textbox(body_rect, report_text, fontsize=12, fontname="helv", align=0)  # Left-aligned
+
+            # Add footer with current date and time
+            footer_text = f"Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            new_page.insert_textbox(footer_rect, footer_text, fontsize=10, fontname="helv", align=2)  # Right-aligned
+
+            # Save the PDF to a temporary file
             output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
             pdf_doc.save(output_pdf)
             pdf_doc.close()
-            
             return output_pdf
         except Exception as e:
-            st.error(f"Error adding report to PDF: {str(e)}")
+            st.error(f"Error creating report PDF: {str(e)}")
             return None
 
+    # --- AI Prompt Definition ---
     input_prompt = """
-    Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
-    with a deep understanding of tech field, software engineering, data science, data analysis, 
-    and big data engineering. Your task is to evaluate the resume based on the given job description. 
-    You must consider the job market is very competitive and provide detailed scoring for recruiters. 
-    Assign the percentage Matching based on JD, list missing keywords, and provide a skills breakdown 
-    and experience insight. 
-    resume:{text} 
-    description:{jd} 
-    I want the response in one single string having the structure: 
-    {{"JD Match":"%","MissingKeywords":[],"SkillsBreakdown":"", "ExperienceInsight":""}} 
+    Hey, act like a skilled ATS (Application Tracking System) with deep expertise in tech fields like software engineering, 
+    data science, data analysis, and big data engineering. Evaluate the resume against the job description, considering 
+    a highly competitive job market. Extract the candidate's name, calculate the JD match percentage, list missing keywords, 
+    and provide a skills breakdown and experience insight. Return the response as a single JSON string with this structure:
+    {"CandidateName":"", "JD Match":"%", "MissingKeywords":[], "SkillsBreakdown":"", "ExperienceInsight":""}
+    resume: {text}
+    description: {jd}
     """
 
-    # Initialize session state for Recruiter
-    if 'jd_history_recruiter' not in st.session_state:
-        st.session_state.jd_history_recruiter = []
+    # --- Session State Initialization ---
     if 'results_history_recruiter' not in st.session_state:
         st.session_state.results_history_recruiter = []
 
-    # Sub-tabs
-    tab_recruiter, = st.tabs(["Recruiter"])  # Unpacking the single-element list
+    # --- UI Layout ---
+    st.header("Recruiter Tool")
+    st.text("Generate a candidate match report for recruiters")
 
-    with tab_recruiter:
-        st.header("Recruiter")
-        st.text("Connecting great Resumes with great Jobs")
+    # Job Description input
+    jd = st.text_area("Paste the Job Description", "", key="job_recruiter_jd")
 
-        # Job Description input
-        jd = st.text_area("Paste the Job Description", "", key="job_recruiter_jd")
+    # Resume upload
+    uploaded_file = st.file_uploader("Upload Candidate Resume", type="pdf", help="Upload a PDF resume")
 
-        # Resume Upload
-        uploaded_files = [st.file_uploader("Upload Your Resume", type="pdf", help="Please upload the PDF")]
+    # Submit button
+    submit = st.button("Generate Report ➤")
 
-        # Submit button
-        submit = st.button("Check➤")
+    # --- Processing Logic ---
+    if submit:
+        if not uploaded_file or not jd:
+            st.warning("Please upload a resume and provide a job description.")
+        else:
+            # Extract text from the resume
+            resume_text = extract_text_with_layout(uploaded_file)
 
-        if submit:
-            if uploaded_files and jd:
-                # Store JD in history
-                if jd not in st.session_state.jd_history_recruiter:
-                    st.session_state.jd_history_recruiter.append(jd)
+            # Get AI response
+            response = get_gemini_response(input_prompt.format(text=resume_text, jd=jd))
 
-                for uploaded_file in uploaded_files:
-                    if uploaded_file is not None:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-                            temp_pdf.write(uploaded_file.read())
-                            temp_pdf_path = temp_pdf.name
+            if response and isinstance(response, dict):
+                parsed_response = response
 
-                        resume_text = extract_text_with_layout(temp_pdf_path)
-                        response = get_gemini_response(input_prompt.format(text=resume_text, jd=jd))
+                # Store the result in session state
+                st.session_state.results_history_recruiter.append(parsed_response)
 
-                        if response:
-                            try:
-                                parsed_response = response if isinstance(response, dict) else json.loads(response)
-                                st.session_state.results_history_recruiter.append(parsed_response)
+                # --- Display Results on Screen ---
+                st.subheader(f"Candidate: {parsed_response['CandidateName']}")
+                st.write(f"**JD Match:** {parsed_response['JD Match']}")
+                st.write(f"**Skills Breakdown:** {parsed_response['SkillsBreakdown']}")
+                st.write(f"**Missing Keywords:** {', '.join(parsed_response['MissingKeywords']) if parsed_response['MissingKeywords'] else 'None'}")
+                st.write(f"**Experience Insight:** {parsed_response['ExperienceInsight']}")
 
-                                # Display results
-                                st.subheader(f"JD Match: {parsed_response['JD Match']}")
-                                st.write(f"Skills Breakdown: {parsed_response['SkillsBreakdown']}")
-                                st.write(f"Missing Keywords: {parsed_response['MissingKeywords']}")
-                                st.write(f"Experience Insight: {parsed_response['ExperienceInsight']}")
+                # --- Generate Report Text with Proper Spacing ---
+                report_text = (
+                    f"JD Match Score: {parsed_response['JD Match']}\n\n"
+                    f"Skills Breakdown: {parsed_response['SkillsBreakdown']}\n\n"
+                    f"Missing Keywords: {', '.join(parsed_response['MissingKeywords']) if parsed_response['MissingKeywords'] else 'All key skills present'}\n\n"
+                    f"Experience Insight: {parsed_response['ExperienceInsight']}"
+                )
+                st.text("Report Preview:\n" + report_text)
 
-                                # Candidate Scoring and Ranking System
-                                st.subheader("Candidate Match Report")
-                                match_percentage = float(parsed_response['JD Match'].strip('%'))
-                                report_text = (
-                                    f"Candidate Match Report\n\n"
-                                    f"JD Match Score: {parsed_response['JD Match']}\n"
-                                    f"Skills Breakdown: {parsed_response['SkillsBreakdown']}\n"
-                                    f"Missing Keywords: {', '.join(parsed_response['MissingKeywords']) if parsed_response['MissingKeywords'] else 'All key skills present'}\n"
-                                    f"Experience Insight: {parsed_response['ExperienceInsight']}"
-                                )
-                                st.text(report_text)
-
-                                # Add report to PDF and provide download
-                                enhanced_pdf_filename = add_text_to_pdf(temp_pdf_path, report_text)
-                                if enhanced_pdf_filename and os.path.exists(enhanced_pdf_filename):
-                                    with open(enhanced_pdf_filename, "rb") as file:
-                                        st.download_button(
-                                            label="Download Candidate Match Report PDF",
-                                            data=file,
-                                            file_name=f"Candidate_Match_Report_{uploaded_file.name}",
-                                            mime="application/pdf"
-                                        )
-                                else:
-                                    st.error("Failed to generate report PDF.")
-
-                            except json.JSONDecodeError:
-                                st.error("There was an error parsing the model's response. Please try again.")
+                # --- Create and Download Report PDF ---
+                report_pdf_filename = create_report_pdf(parsed_response["CandidateName"], report_text)
+                if report_pdf_filename and os.path.exists(report_pdf_filename):
+                    with open(report_pdf_filename, "rb") as file:
+                        # Create a clean filename using the candidate's name (replace spaces with underscores)
+                        candidate_name_safe = parsed_response["CandidateName"].replace(" ", "_")
+                        report_file_name = f"Candidate_Match_Report_{candidate_name_safe}.pdf"
+                        st.download_button(
+                            label="Download Candidate Match Report PDF",
+                            data=file,
+                            file_name=report_file_name,
+                            mime="application/pdf"
+                        )
+                else:
+                    st.error("Failed to generate the report PDF.")
             else:
-                st.warning("Please provide both a job description and a resume.")
+                st.error("Failed to process the AI response. Please try again.")
 
-        # Display JD history for recruiter
-        if st.session_state.jd_history_recruiter:
-            st.subheader("Past Job Descriptions")
-            for idx, past_jd in enumerate(st.session_state.jd_history_recruiter, start=1):
-                st.text(f"{idx}. {past_jd}")
-
-        # Display past results for recruiter
-        if st.session_state.results_history_recruiter:
-            st.subheader("Past Results")
-            for result in st.session_state.results_history_recruiter:
-                st.write(f"**JD Match:** {result['JD Match']}")
-                st.write(f"**Skills Breakdown:** {result['SkillsBreakdown']}")
-                st.write(f"**Missing Keywords:** {result['MissingKeywords']}")
-                st.write(f"**Experience Insight:** {result['ExperienceInsight']}")
-                st.write("---")
+    # --- Display Past Results ---
+    if st.session_state.results_history_recruiter:
+        st.subheader("Past Reports")
+        for result in st.session_state.results_history_recruiter:
+            st.write(f"**Candidate:** {result['CandidateName']}")
+            st.write(f"**JD Match:** {result['JD Match']}")
+            st.write(f"**Skills Breakdown:** {result['SkillsBreakdown']}")
+            st.write(f"**Missing Keywords:** {result['MissingKeywords']}")
+            st.write(f"**Experience Insight:** {result['ExperienceInsight']}")
+            st.write("---")
 
 with tab3:
     st.subheader("HireVana 🔍")
