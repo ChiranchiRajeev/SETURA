@@ -66,7 +66,7 @@ with tab1:
     # Load Data
     @st.cache_data
     def load_data():
-        df = pd.read_excel(r"D:\Python project\salary_fairness_data.xlsx")
+        df = pd.read_excel(r"salary_fairness_data.xlsx")
         return df
 
     df = load_data()
@@ -356,7 +356,7 @@ with tab4:
     st.subheader("TrackVana 🚀")
 
     # Functions
-    file_path = r"D:\Python project\recruitment_pipeline_data.xlsx"
+    file_path = r"recruitment_pipeline_data.xlsx"
 
     def load_trackvana_data(file_path):
         if os.path.exists(file_path):
