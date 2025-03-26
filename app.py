@@ -194,54 +194,58 @@ with tab2:
     {{"JD Match":"%","MissingKeywords":[],"Profile Summary":""}} 
     """
 
-    # Initialize session state
-    if 'jd_history_seeker' not in st.session_state:
-        st.session_state.jd_history_seeker = []
-    if 'results_history_seeker' not in st.session_state:
-        st.session_state.results_history_seeker = []
-    if 'selected_result_seeker' not in st.session_state:
-        st.session_state.selected_result_seeker = None
-    if 'selected_jd_seeker' not in st.session_state:
-        st.session_state.selected_jd_seeker = None
+    # Initialize session state for Recruiter
     if 'jd_history_recruiter' not in st.session_state:
         st.session_state.jd_history_recruiter = []
     if 'results_history_recruiter' not in st.session_state:
         st.session_state.results_history_recruiter = []
-    if 'selected_result_recruiter' not in st.session_state:
-        st.session_state.selected_result_recruiter = None
-    if 'selected_jd_recruiter' not in st.session_state:
-        st.session_state.selected_jd_recruiter = None
 
     # Sub-tabs
     tab_recruiter, = st.tabs(["Recruiter"])  # Unpacking the single-element list
 
-
     with tab_recruiter:
         st.header("Recruiter")
         st.text("Connecting great Resumes with great Jobs")
-        jd = st.text_area("Paste the Job Description", st.session_state.selected_jd_seeker if st.session_state.selected_jd_seeker else "", key="job_seeker_jd")
-        uploaded_files = [st.file_uploader("Upload Your Resume", type="pdf", help="Please upload the pdf")]
+
+        # Job Description input
+        jd = st.text_area("Paste the Job Description", "", key="job_recruiter_jd")
+
+        # Resume Upload
+        uploaded_files = [st.file_uploader("Upload Your Resume", type="pdf", help="Please upload the PDF")]
+
+        # Submit button
         submit = st.button("Check➤")
+
         if submit:
             if uploaded_files and jd:
-                if jd not in st.session_state.jd_history_seeker:
-                    st.session_state.jd_history_seeker.append(jd)
+                # Store JD in history
+                if jd not in st.session_state.jd_history_recruiter:
+                    st.session_state.jd_history_recruiter.append(jd)
+
                 for uploaded_file in uploaded_files:
                     if uploaded_file is not None:
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
                             temp_pdf.write(uploaded_file.read())
                             temp_pdf_path = temp_pdf.name
+
                         resume_text = extract_text_with_layout(temp_pdf_path)
                         response = get_gemini_response(input_prompt.format(text=resume_text, jd=jd))
+
                         if response:
                             try:
                                 parsed_response = response if isinstance(response, dict) else json.loads(response)
-                                st.session_state.results_history_seeker.append(parsed_response)
+                                st.session_state.results_history_recruiter.append(parsed_response)
+
+                                # Display results
                                 st.subheader(f"JD Match: {parsed_response['JD Match']}")
                                 st.write(f"Profile Summary: {parsed_response['Profile Summary']}")
                                 st.write(f"Missing Keywords: {parsed_response['MissingKeywords']}")
+
+                                # Enhance PDF with missing keywords
                                 missing_keywords_text = format_missing_keywords(parsed_response["MissingKeywords"])
                                 enhanced_pdf_filename = add_keywords_to_pdf(temp_pdf_path, missing_keywords_text)
+
+                                # Download enhanced PDF
                                 with open(enhanced_pdf_filename, "rb") as file:
                                     st.download_button(
                                         label="Download Enhanced Resume PDF",
@@ -253,6 +257,22 @@ with tab2:
                                 st.error("There was an error parsing the model's response. Please try again.")
             else:
                 st.warning("Please provide both a job description and a resume.")
+
+        # Display JD history for recruiter
+        if st.session_state.jd_history_recruiter:
+            st.subheader("Past Job Descriptions")
+            for idx, past_jd in enumerate(st.session_state.jd_history_recruiter, start=1):
+                st.text(f"{idx}. {past_jd}")
+
+        # Display past results for recruiter
+        if st.session_state.results_history_recruiter:
+            st.subheader("Past Results")
+            for result in st.session_state.results_history_recruiter:
+                st.write(f"**JD Match:** {result['JD Match']}")
+                st.write(f"**Profile Summary:** {result['Profile Summary']}")
+                st.write(f"**Missing Keywords:** {result['MissingKeywords']}")
+                st.write("---")
+
 
 
 with tab3:
