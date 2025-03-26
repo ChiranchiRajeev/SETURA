@@ -21,7 +21,7 @@ import json
 import tempfile
 import requests  # Already needed for NewsAPI
 from datetime import datetime, timedelta  # Added for date handling
-
+import ast
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
 
