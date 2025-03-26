@@ -268,11 +268,6 @@ with tab3:
     import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY_LI)
 
-    import json
-    import re
-    import pandas as pd
-    from serpapi import GoogleSearch
-
     # Function to Search LinkedIn Profiles
     def search_linkedin_profiles(query):
         params = {
@@ -340,10 +335,15 @@ with tab3:
             # Extract JSON Data from AI Response
             json_match = re.search(r"\[.*\]", ai_response, re.DOTALL)
             if json_match:
-                clean_json = json_match.group(0)
-                ranked_candidates = json.loads(clean_json)
+                clean_json = json_match.group(0).strip()
+                try:
+                    ranked_candidates = ast.literal_eval(clean_json)  # Safer than json.loads()
+                
+                except (SyntaxError, ValueError) as e:
+                    raise ValueError(f"❌ AI returned invalid JSON format: {e}")
             else:
                 raise ValueError("Invalid JSON received from AI.")
+                
 
             # Ensure AI response is a list
             if not isinstance(ranked_candidates, list):
