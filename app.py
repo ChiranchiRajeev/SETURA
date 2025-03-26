@@ -215,7 +215,7 @@ with tab2:
     # Sub-tabs
     tab_recruiter = st.tabs([ "Recruiter"])
 
-    with tab_seeker:
+    with tab_recruiter:
         st.header("Recruiter")
         st.text("Connecting great Resumes with great Jobs")
         jd = st.text_area("Paste the Job Description", st.session_state.selected_jd_seeker if st.session_state.selected_jd_seeker else "", key="job_seeker_jd")
