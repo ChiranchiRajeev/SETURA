@@ -213,10 +213,10 @@ with tab2:
         st.session_state.selected_jd_recruiter = None
 
     # Sub-tabs
-    tab_seeker, tab_recruiter = st.tabs(["Job Seeker", "Recruiter"])
+    tab_recruiter = st.tabs([ "Recruiter"])
 
     with tab_seeker:
-        st.header("Job Seeker")
+        st.header("Recruiter")
         st.text("Connecting great Resumes with great Jobs")
         jd = st.text_area("Paste the Job Description", st.session_state.selected_jd_seeker if st.session_state.selected_jd_seeker else "", key="job_seeker_jd")
         uploaded_files = [st.file_uploader("Upload Your Resume", type="pdf", help="Please upload the pdf")]
@@ -253,9 +253,6 @@ with tab2:
             else:
                 st.warning("Please provide both a job description and a resume.")
 
-    with tab_recruiter:
-        st.subheader("Recruiter")
-        st.text("Evaluate Job Descriptions with Multiple Resumes")
 
 with tab3:
     st.subheader("HireVana 🔍")
