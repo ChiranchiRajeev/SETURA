@@ -60,6 +60,7 @@ def fetch_hr_news():
 st.title("Setura🤝")
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana", "HR Pulse", "Tutorial 📺"])
 
+
 with tab1:
     st.subheader("JustScale 💰")
     st.subheader("📊 Salary Prediction & Fairness Analysis")
