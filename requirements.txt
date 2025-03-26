@@ -13,4 +13,5 @@ altair
 python-dotenv
 requests
 google-search-results
+openpyxl
 
