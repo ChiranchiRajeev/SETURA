@@ -29,6 +29,7 @@ st.set_page_config(page_title="Setura", layout="wide")
 load_dotenv()
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
+
 # Function to fetch the very latest HR-specific news
 def fetch_hr_news():
     url = "https://newsapi.org/v2/everything"
@@ -134,6 +135,7 @@ with tab1:
     plt.xticks(rotation=45)
     st.pyplot(fig2)
 
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 with tab2:
     st.subheader("ResumeFlow 📝")
 
