@@ -166,61 +166,17 @@ with tab2:
                 text += page.extract_text() + "\n"
         return text
 
-    def format_missing_keywords(missing_keywords):
-        if missing_keywords:
-            return "\n\nSkills: \n" + ", ".join(missing_keywords)
-        return ""
-
-    def add_keywords_to_pdf(input_pdf, missing_keywords_text):
-        try:
-            # Open the PDF
-            pdf_doc = fitz.open(input_pdf)
-            last_page = pdf_doc[-1]
-            
-            # Define the rectangle for text insertion (adjust coordinates as needed)
-            # Using a larger area and checking available space
-            page_width = last_page.rect.width
-            page_height = last_page.rect.height
-            text_rect = fitz.Rect(50, page_height - 200, page_width - 50, page_height - 20)
-            
-            # Check if there's enough space, if not, add a new page
-            if last_page.get_textbox(text_rect):
-                # If there's content in the proposed area, add a new page
-                last_page = pdf_doc.new_page()
-                text_rect = fitz.Rect(50, 50, page_width - 50, page_height - 50)
-            
-            # Insert the text with better formatting
-            last_page.insert_textbox(
-                text_rect,
-                missing_keywords_text,
-                fontsize=12,
-                fontname="helv",  # Use a common font
-                color=(0, 0, 0),  # Black color
-                align=0  # Left align
-            )
-            
-            # Save the modified PDF
-            output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
-            pdf_doc.save(output_pdf)
-            pdf_doc.close()
-            
-            return output_pdf
-        
-        except Exception as e:
-            st.error(f"Error adding keywords to PDF: {str(e)}")
-            return None
-
     input_prompt = """
     Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
     with a deep understanding of tech field, software engineering, data science, data analysis, 
     and big data engineering. Your task is to evaluate the resume based on the given job description. 
-    You must consider the job market is very competitive and you should provide 
-    best assistance for improving the resumes. Assign the percentage Matching based 
-    on JD and the missing keywords with high accuracy. 
+    You must consider the job market is very competitive and provide detailed scoring for recruiters. 
+    Assign the percentage Matching based on JD, list missing keywords, and provide a skills breakdown 
+    and experience insight. 
     resume:{text} 
     description:{jd} 
     I want the response in one single string having the structure: 
-    {{"JD Match":"%","MissingKeywords":[],"Profile Summary":""}} 
+    {{"JD Match":"%","MissingKeywords":[],"SkillsBreakdown":"", "ExperienceInsight":""}} 
     """
 
     # Initialize session state for Recruiter
@@ -267,27 +223,29 @@ with tab2:
 
                                 # Display results
                                 st.subheader(f"JD Match: {parsed_response['JD Match']}")
-                                st.write(f"Profile Summary: {parsed_response['Profile Summary']}")
+                                st.write(f"Skills Breakdown: {parsed_response['SkillsBreakdown']}")
                                 st.write(f"Missing Keywords: {parsed_response['MissingKeywords']}")
+                                st.write(f"Experience Insight: {parsed_response['ExperienceInsight']}")
 
-                                # Enhance PDF with missing keywords
-                                missing_keywords_text = format_missing_keywords(parsed_response["MissingKeywords"])
-                                enhanced_pdf_filename = add_keywords_to_pdf(temp_pdf_path, missing_keywords_text)
-                                
-                                if enhanced_pdf_filename:
-                                    # Verify the file exists and is readable
-                                    if os.path.exists(enhanced_pdf_filename):
-                                        with open(enhanced_pdf_filename, "rb") as file:
-                                            st.download_button(
-                                                label="Download Enhanced Resume PDF",
-                                                data=file,
-                                                file_name=f"Enhanced_{uploaded_file.name}",
-                                                mime="application/pdf"
-                                            )
-                                    else:
-                                        st.error("Enhanced PDF file was not created successfully.")
-                                else:
-                                    st.error("Failed to generate enhanced PDF.")
+                                # Candidate Scoring and Ranking System
+                                st.subheader("Candidate Match Report")
+                                match_percentage = float(parsed_response['JD Match'].strip('%'))
+                                report_text = (
+                                    f"Candidate Match Report\n\n"
+                                    f"JD Match Score: {parsed_response['JD Match']}\n"
+                                    f"Skills Breakdown: {parsed_response['SkillsBreakdown']}\n"
+                                    f"Missing Keywords: {', '.join(parsed_response['MissingKeywords']) if parsed_response['MissingKeywords'] else 'All key skills present'}\n"
+                                    f"Experience Insight: {parsed_response['ExperienceInsight']}"
+                                )
+                                st.text(report_text)
+
+                                # Download Candidate Match Report
+                                st.download_button(
+                                    label="Download Candidate Match Report",
+                                    data=report_text,
+                                    file_name=f"Candidate_Match_Report_{uploaded_file.name.replace('.pdf', '')}.txt",
+                                    mime="text/plain"
+                                )
 
                             except json.JSONDecodeError:
                                 st.error("There was an error parsing the model's response. Please try again.")
@@ -305,8 +263,9 @@ with tab2:
             st.subheader("Past Results")
             for result in st.session_state.results_history_recruiter:
                 st.write(f"**JD Match:** {result['JD Match']}")
-                st.write(f"**Profile Summary:** {result['Profile Summary']}")
+                st.write(f"**Skills Breakdown:** {result['SkillsBreakdown']}")
                 st.write(f"**Missing Keywords:** {result['MissingKeywords']}")
+                st.write(f"**Experience Insight:** {result['ExperienceInsight']}")
                 st.write("---")
 
 
