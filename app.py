@@ -22,32 +22,12 @@ import tempfile
 import requests  # Already needed for NewsAPI
 from datetime import datetime, timedelta  # Added for date handling
 
-
-
-
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
 
-load_dotenv()
-
-# Load API keys safely
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
-NEWS_API_KEY = os.getenv("NEWS_API_KEY") or st.secrets.get("NEWS_API_KEY")
-SERPAPI_KEY = os.getenv("SERPAPI_KEY") or st.secrets.get("SERPAPI_KEY")
-
-# Validate API keys
-if not GOOGLE_API_KEY:
-    st.error("❌ Missing GOOGLE API Key. Check .env or Streamlit Secrets.")
-
-if not NEWS_API_KEY:
-    st.error("❌ Missing NEWS API Key. Check .env or Streamlit Secrets.")
-
-if not SERPAPI_KEY:
-    st.error("❌ Missing SERPAPI API Key. Check .env or Streamlit Secrets.")
-
 # Load environment variables (already in your code)
 load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
 # Function to fetch the very latest HR-specific news
 def fetch_hr_news():
@@ -56,7 +36,7 @@ def fetch_hr_news():
     from_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     params = {
         "q": '"human resources" OR "HR managers" OR "human resource management" OR "HR in companies" OR "HR professionals" OR "corporate HR"',
-        "apiKey": os.getenv("NEWS_API_KEY"),
+        "apiKey": st.secrets["NEWS_API_KEY"],  # Updated to use Streamlit Secrets
         "language": "en",
         "sortBy": "publishedAt",
         "from": from_date,
@@ -161,6 +141,7 @@ with tab2:
     def get_gemini_response(input_prompt):
         try:
             model = genai.GenerativeModel("gemini-1.5-pro-latest")
+            model.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             response = model.generate_content(input_prompt)
             if not response or not hasattr(response, 'text'):
                 st.error("AI response is empty. Please try again.")
@@ -280,8 +261,8 @@ with tab3:
     st.subheader("HireVana 🔍")
 
     # Functions
-    GEMINI_API_KEY_LI = os.getenv("GEMINI_API_KEY_LI")
-    SERPAPI_KEY = os.getenv("SERPAPI_KEY")
+    GEMINI_API_KEY_LI = st.secrets["GEMINI_API_KEY_LI"]
+    SERPAPI_KEY = st.secrets["SERPAPI_KEY"]
     genai.configure(api_key=GEMINI_API_KEY_LI)
 
     def search_linkedin_profiles(query):
