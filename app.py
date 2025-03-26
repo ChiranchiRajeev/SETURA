@@ -135,7 +135,6 @@ with tab1:
     plt.xticks(rotation=45)
     st.pyplot(fig2)
 
-genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 with tab2:
     st.subheader("ResumeFlow 📝")
 
@@ -143,7 +142,6 @@ with tab2:
     def get_gemini_response(input_prompt):
         try:
             model = genai.GenerativeModel("gemini-1.5-pro-latest")
-            model.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             response = model.generate_content(input_prompt)
             if not response or not hasattr(response, 'text'):
                 st.error("AI response is empty. Please try again.")
