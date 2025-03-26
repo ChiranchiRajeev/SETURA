@@ -22,8 +22,28 @@ import tempfile
 import requests  # Already needed for NewsAPI
 from datetime import datetime, timedelta  # Added for date handling
 
+
+
+
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
+
+load_dotenv()
+
+# Load API keys safely
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
+NEWS_API_KEY = os.getenv("NEWS_API_KEY") or st.secrets.get("NEWS_API_KEY")
+SERPAPI_KEY = os.getenv("SERPAPI_KEY") or st.secrets.get("SERPAPI_KEY")
+
+# Validate API keys
+if not GOOGLE_API_KEY:
+    st.error("❌ Missing GOOGLE API Key. Check .env or Streamlit Secrets.")
+
+if not NEWS_API_KEY:
+    st.error("❌ Missing NEWS API Key. Check .env or Streamlit Secrets.")
+
+if not SERPAPI_KEY:
+    st.error("❌ Missing SERPAPI API Key. Check .env or Streamlit Secrets.")
 
 # Load environment variables (already in your code)
 load_dotenv()
