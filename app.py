@@ -146,7 +146,7 @@ import google.generativeai as genai
 from datetime import datetime
 
 # Assuming this is inside a tab (e.g., tab2) as per your context
-with st.tab2:  # Replace 'tab2' with your actual tab variable if different
+with tab2:  # Replace 'tab2' with your actual tab variable if different
     st.subheader("ResumeFlow 📝")
 
     # --- Function Definitions ---
