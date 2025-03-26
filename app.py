@@ -260,11 +260,20 @@ with tab2:
 with tab3:
     st.subheader("HireVana 🔍")
 
-    # Functions
+    # Load API Keys from Streamlit Secrets
     GEMINI_API_KEY_LI = st.secrets["GEMINI_API_KEY_LI"]
     SERPAPI_KEY = st.secrets["SERPAPI_KEY"]
+    
+    # Configure Gemini AI
+    import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY_LI)
 
+    import json
+    import re
+    import pandas as pd
+    from serpapi import GoogleSearch
+
+    # Function to Search LinkedIn Profiles
     def search_linkedin_profiles(query):
         params = {
             "engine": "google",
@@ -282,53 +291,80 @@ with tab3:
                 candidates.append({"name": title, "linkedin": link})
         return candidates
 
+    # Function to Rank Candidates using Gemini AI
     def rank_candidates_linkedin(hr_requirement, candidates):
         model = genai.GenerativeModel("gemini-1.5-pro-latest")
+
         candidate_texts = "\n".join([
             f"- Name: {c['name']}\n  LinkedIn: {c['linkedin']}\n  Experience: {c.get('experience', 'N/A')}\n  Skills: {', '.join(c.get('skills', []))}"
             for c in candidates
         ])
+
         li_prompt = f"""
-        You are an AI recruitment assistant. Your job is to *evaluate and rank LinkedIn candidates* based on their experience, skills, and relevance to the job requirement.
+        You are an AI recruitment assistant. Your job is to evaluate and rank LinkedIn candidates based on their experience, skills, and relevance to the job requirement.
+
         ### *Job Requirement:*
         {hr_requirement}
+
         ### *Candidates to Rank:*
         {candidate_texts}
+
         ### *Scoring Criteria:*
-        - Give a *score between 1 and 10* (10 = Best match, 1 = Weak match).
-        - *Experience*: More relevant years = Higher score.
-        - *Skills Match*: More matching skills = Higher score.
-        - *Role Alignment*: If past jobs match the requirement, increase score.
-        *🚨 Return ONLY valid JSON in this format (no extra text):*
+        - Give a score between **1 and 10** (10 = Best match, 1 = Weak match).
+        - *Experience:* More relevant years = Higher score.
+        - *Skills Match:* More matching skills = Higher score.
+        - *Role Alignment:* If past jobs match the requirement, increase score.
+
+        🚨 Return **ONLY valid JSON** in this format:
         ```json
         [
             {{"name": "Alice Johnson", "linkedin": "https://www.linkedin.com/in/alicejohnson", "score": 9.5}},
             {{"name": "Bob Smith", "linkedin": "https://www.linkedin.com/in/bobsmith", "score": 8.2}}
         ]
+        ```
         """
+
         try:
             response = model.generate_content(li_prompt)
+
+            # Validate AI Response Before Processing
+            if not response or not hasattr(response, "text") or not response.text.strip():
+                st.error("❌ AI returned an empty response. Please try again.")
+                return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
+
             ai_response = response.text.strip()
+
+            # Debug: Print AI response to check JSON format
+            print("AI Response:", ai_response)
+
+            # Extract JSON Data from AI Response
             json_match = re.search(r"\[.*\]", ai_response, re.DOTALL)
             if json_match:
                 clean_json = json_match.group(0)
                 ranked_candidates = json.loads(clean_json)
             else:
-                raise ValueError("Invalid JSON received.")
+                raise ValueError("Invalid JSON received from AI.")
+
+            # Ensure AI response is a list
+            if not isinstance(ranked_candidates, list):
+                raise ValueError("AI response is not a list.")
+
+            # Ensure all candidates have valid numeric scores
             if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
                 raise ValueError("AI returned non-numeric scores.")
-            if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
-                raise ValueError("AI returned non-numeric scores.")
+
+            return sorted(ranked_candidates, key=lambda x: x["score"], reverse=True)
+
         except (json.JSONDecodeError, AttributeError, ValueError) as e:
             st.error(f"❌ Error in AI ranking: {str(e)}")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
-
-    # UI
+    # UI: Sidebar Search & Ranking
     st.sidebar.title("🔍 AI-Powered LinkedIn Hiring")
     st.sidebar.subheader("🔎 Search LinkedIn Profiles")
     search_query = st.sidebar.text_input("Enter Job Keywords (e.g., Data Scientist, Python, New York)")
     hr_requirement = st.sidebar.text_area("Describe Ideal Candidate (for LinkedIn Ranking)")
+
     if st.sidebar.button("🔍 Find Candidates"):
         with st.spinner("Fetching LinkedIn profiles..."):
             candidates = search_linkedin_profiles(search_query)
@@ -337,23 +373,29 @@ with tab3:
             else:
                 st.session_state.candidates = candidates
                 st.write("### 📌 Found Candidates:")
-                # --- CHANGE MADE HERE: Replaced st.write with st.markdown for clickable links ---
                 for c in candidates:
                     st.markdown(f"👤 {c['name']} - [LinkedIn Profile]({c['linkedin']})")
+
     if st.sidebar.button("🚀 Rank LinkedIn Candidates"):
         if "candidates" not in st.session_state or not st.session_state.candidates:
             st.error("Please search for candidates first!")
         else:
             with st.spinner("Ranking candidates..."):
                 ranked_candidates = rank_candidates_linkedin(hr_requirement, st.session_state.candidates)
-                df = pd.DataFrame([{
-                    "Name": c["name"],
-                    "LinkedIn": c["linkedin"],
-                    "Score": round(c["score"], 2)
-                } for c in ranked_candidates])
-                st.write("### 📊 LinkedIn Candidate Rankings")
-                st.dataframe(df.style.format({"Score": "{:.2f}"}).highlight_max(axis=0))
-                st.info("🎯 This tool fetches LinkedIn candidates via Google Search & ranks them using AI.")
+
+                if not ranked_candidates:
+                    st.warning("AI could not rank candidates. Try again.")
+                else:
+                    df = pd.DataFrame([{
+                        "Name": c["name"],
+                        "LinkedIn": c["linkedin"],
+                        "Score": round(c["score"], 2)
+                    } for c in ranked_candidates])
+
+                    st.write("### 📊 LinkedIn Candidate Rankings")
+                    st.dataframe(df.style.format({"Score": "{:.2f}"}).highlight_max(axis=0))
+                    st.info("🎯 This tool fetches LinkedIn candidates via Google Search & ranks them using AI.")
+
 
 
 with tab4:
