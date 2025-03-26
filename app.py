@@ -168,7 +168,9 @@ with tab2:
 
     def format_recommendations(recommendations):
         if recommendations:
-            return "\n\nRecommended Actions:\n" + "\n".join([f"- {rec}" for rec in recommendations])
+            # Limit to 15 lines
+            limited_recommendations = recommendations[:15]
+            return "\n\nRecruiter Recommendations:\n" + "\n".join([f"- {rec}" for rec in limited_recommendations])
         return ""
 
     def generate_recruiter_recommendations(input_pdf, recommendations_text):
@@ -211,12 +213,11 @@ with tab2:
     input_prompt = """
     Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
     with a deep understanding of tech field, software engineering, data science, data analysis, 
-    and big data engineering. Your task is to evaluate the resume based on the given job description. 
-    You must consider the job market is very competitive and provide 
-    best assistance for improving the resumes. Instead of just listing missing keywords, 
-    provide actionable recommendations for the recruiter to improve the candidate's resume 
-    to better match the job description. Assign the percentage Matching based on JD 
-    and provide recommendations with high accuracy. 
+    and big data engineering. Your task is to evaluate the resume based on the given job description 
+    from a recruiter's perspective. You must consider the job market is very competitive. 
+    Provide a percentage match based on the JD and up to 15 actionable recommendations (max 15 lines) 
+    for the recruiter, focusing on what skills or experiences are missing in the candidate 
+    and what the recruiter can expect from this candidate’s current qualifications. 
     resume:{text} 
     description:{jd} 
     I want the response in one single string having the structure: 
