@@ -135,10 +135,19 @@ with tab1:
     plt.xticks(rotation=45)
     st.pyplot(fig2)
 
-with tab2:
-    st.subheader("ResumeFlow 📝")
+import streamlit as st
+import fitz  # PyMuPDF
+import json
+import tempfile
+import pdfplumber
+import pandas as pd
+import altair as alt
+import google.generativeai as genai
+import re
 
-    # AI Response Function
+with tab2:
+    st.subheader("ResumeFlow 📝 - Recruiter")
+
     def get_gemini_response(input_prompt):
         try:
             model = genai.GenerativeModel("gemini-1.5-pro-latest")
@@ -159,7 +168,6 @@ with tab2:
             st.error(f"Unexpected error: {str(e)}")
             return None
 
-    # Extract Text from PDF
     def extract_text_with_layout(uploaded_file):
         text = ""
         with pdfplumber.open(uploaded_file) as pdf:
@@ -167,115 +175,118 @@ with tab2:
                 text += page.extract_text() + "\n"
         return text
 
-    # Function to Modify Resume PDF
-    def modify_resume_with_keywords(input_pdf, missing_keywords):
-        doc = fitz.open(input_pdf)
-        found_skills_section = False
+    def add_missing_keywords_to_pdf(input_pdf, missing_keywords):
+        pdf_doc = fitz.open(input_pdf)
+        missing_text = ", ".join(missing_keywords)
 
-        for page in doc:
-            text = page.get_text("text")
+        for page in pdf_doc:
+            text_instances = page.search_for("Skills", hit_max=1)  # Find the "Skills" section
+            if text_instances:
+                text_rect = text_instances[0]  # First occurrence
+                insert_x, insert_y = text_rect.x0, text_rect.y1 + 10  # Insert below "Skills"
 
-            # Find "Skills" section and add missing keywords
-            if "Skills" in text or "SKILLS" in text:
-                found_skills_section = True
-                skills_start = text.find("Skills") if "Skills" in text else text.find("SKILLS")
-                insert_position = skills_start + len("Skills\n")
-
-                new_text = "\n".join(missing_keywords)  # Convert list to formatted text
-                page.insert_text((50, insert_position + 50), new_text, fontsize=12, color=(0, 0, 0))
-
-        # If no "Skills" section was found, add at the end
-        if not found_skills_section:
-            last_page = doc[-1]
-            last_page.insert_text((50, last_page.rect.height - 100), "Additional Skills:\n" + "\n".join(missing_keywords), fontsize=12, color=(0, 0, 0))
+                # Find existing font details
+                font_name = page.get_fonts()[0][3] if page.get_fonts() else "helv"
+                font_size = 12  # Default size
+                page.insert_text((insert_x, insert_y), f"Added: {missing_text}", fontsize=font_size, fontname=font_name, color=(0, 0, 0))
+                break  # Only update first found "Skills" section
 
         output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
-        doc.save(output_pdf)
-        doc.close()
+        pdf_doc.save(output_pdf)
+        pdf_doc.close()
         return output_pdf
 
-    # Prompt for AI
     input_prompt = """
     Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
     with a deep understanding of tech field, software engineering, data science, data analysis, 
     and big data engineering. Your task is to evaluate the resume based on the given job description. 
-    You must consider the job market is very competitive and you should provide 
-    best assistance for improving the resumes. Assign the percentage Matching based 
-    on JD and the missing keywords with high accuracy. 
+    Assign the percentage Matching based on JD and the missing keywords with high accuracy. 
     resume:{text} 
     description:{jd} 
     I want the response in one single string having the structure: 
     {{"JD Match":"%","MissingKeywords":[],"Profile Summary":""}} 
     """
 
-    # Session State for Recruiter
     if 'jd_history_recruiter' not in st.session_state:
         st.session_state.jd_history_recruiter = []
     if 'results_history_recruiter' not in st.session_state:
         st.session_state.results_history_recruiter = []
+    if 'selected_result_recruiter' not in st.session_state:
+        st.session_state.selected_result_recruiter = None
+    if 'selected_jd_recruiter' not in st.session_state:
+        st.session_state.selected_jd_recruiter = None
 
-    # Sub-tabs
-    tab_recruiter, = st.tabs(["Recruiter"])
+    st.header("Recruiter")
+    st.text("Evaluate Job Descriptions with Multiple Profiles")
 
-    with tab_recruiter:
-        st.header("Recruiter")
-        st.text("Connecting great Resumes with great Jobs")
+    jd = st.text_area("Paste the Job Description", st.session_state.selected_jd_recruiter if st.session_state.selected_jd_recruiter else "", key="recruiter_jd")
+    uploaded_files = st.file_uploader("Upload Resumes", type="pdf", accept_multiple_files=True)
 
-        # Job Description Input
-        jd = st.text_area("Paste the Job Description", "", key="job_recruiter_jd")
+    submit = st.button("Check➤", key="recruiter_submit")
 
-        # Resume Upload
-        uploaded_files = [st.file_uploader("Upload Your Resume", type="pdf", help="Please upload the PDF")]
+    candidate_results = []
+    if submit:
+        if uploaded_files and jd:
+            if jd not in st.session_state.jd_history_recruiter:
+                st.session_state.jd_history_recruiter.append(jd)
 
-        # Submit button
-        submit = st.button("Check➤")
+            for uploaded_file in uploaded_files:
+                if uploaded_file is not None:
+                    candidate_name = uploaded_file.name
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                        temp_pdf.write(uploaded_file.read())
+                        temp_pdf_path = temp_pdf.name
 
-        if submit:
-            if uploaded_files and jd:
-                if jd not in st.session_state.jd_history_recruiter:
-                    st.session_state.jd_history_recruiter.append(jd)
+                    resume_text = extract_text_with_layout(temp_pdf_path)
+                    response = get_gemini_response(input_prompt.format(text=resume_text, jd=jd))
 
-                for uploaded_file in uploaded_files:
-                    if uploaded_file is not None:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-                            temp_pdf.write(uploaded_file.read())
-                            temp_pdf_path = temp_pdf.name
+                    if response:
+                        try:
+                            parsed_response = json.loads(response)
+                            st.session_state.results_history_recruiter.append(parsed_response)
 
-                        resume_text = extract_text_with_layout(temp_pdf_path)
-                        response = get_gemini_response(input_prompt.format(text=resume_text, jd=jd))
+                            candidate_results.append({
+                                "Candidate": candidate_name,
+                                "JD Match": float(parsed_response["JD Match"].strip('%'))
+                            })
 
-                        if response:
-                            try:
-                                parsed_response = response if isinstance(response, dict) else json.loads(response)
-                                st.session_state.results_history_recruiter.append(parsed_response)
+                            st.write(f"**Candidate: {candidate_name}**")
+                            st.write(f"JD Match: {parsed_response['JD Match']}")
+                            st.write(f"Profile Summary: {parsed_response['Profile Summary']}")
+                            st.write(f"Missing Keywords: {parsed_response['MissingKeywords']}")
 
-                                # Display Results
-                                st.subheader(f"JD Match: {parsed_response['JD Match']}")
-                                st.write(f"Profile Summary: {parsed_response['Profile Summary']}")
-                                st.write(f"Missing Keywords: {parsed_response['MissingKeywords']}")
+                            # Generate Enhanced PDF
+                            enhanced_pdf_filename = add_missing_keywords_to_pdf(temp_pdf_path, parsed_response["MissingKeywords"])
+                            with open(enhanced_pdf_filename, "rb") as file:
+                                st.download_button(
+                                    label="Download Enhanced Resume PDF",
+                                    data=file,
+                                    file_name=f"Enhanced_{uploaded_file.name}",
+                                    mime="application/pdf"
+                                )
+                        except json.JSONDecodeError:
+                            st.error("Error parsing the model's response. Please try again.")
 
-                                # Modify Resume and Download
-                                if parsed_response["MissingKeywords"]:
-                                    enhanced_pdf_filename = modify_resume_with_keywords(temp_pdf_path, parsed_response["MissingKeywords"])
-                                    with open(enhanced_pdf_filename, "rb") as file:
-                                        st.download_button(
-                                            label="Download Enhanced Resume PDF",
-                                            data=file,
-                                            file_name=f"Enhanced_{uploaded_file.name}",
-                                            mime="application/pdf"
-                                        )
-                            except json.JSONDecodeError:
-                                st.error("There was an error parsing the model's response. Please try again.")
-            else:
-                st.warning("Please provide both a job description and a resume.")
+            if candidate_results:
+                df_results = pd.DataFrame(candidate_results)
+                chart = alt.Chart(df_results).mark_bar().encode(
+                    x='Candidate',
+                    y='JD Match',
+                    color='JD Match',
+                    tooltip=['Candidate', 'JD Match']
+                ).properties(
+                    title='JD Match Percentage Comparison'
+                )
+                st.altair_chart(chart, use_container_width=True)
+        else:
+            st.warning("Please provide both a job description and at least one resume.")
 
-        # Display JD History
+
         if st.session_state.jd_history_recruiter:
             st.subheader("Past Job Descriptions")
             for idx, past_jd in enumerate(st.session_state.jd_history_recruiter, start=1):
                 st.text(f"{idx}. {past_jd}")
 
-        # Display Past Results
         if st.session_state.results_history_recruiter:
             st.subheader("Past Results")
             for result in st.session_state.results_history_recruiter:
