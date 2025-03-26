@@ -166,6 +166,36 @@ with tab2:
                 text += page.extract_text() + "\n"
         return text
 
+    def add_text_to_pdf(input_pdf, report_text):
+        try:
+            pdf_doc = fitz.open(input_pdf)
+            last_page = pdf_doc[-1]
+            page_width = last_page.rect.width
+            page_height = last_page.rect.height
+            text_rect = fitz.Rect(50, page_height - 200, page_width - 50, page_height - 20)
+            
+            if last_page.get_textbox(text_rect):
+                last_page = pdf_doc.new_page()
+                text_rect = fitz.Rect(50, 50, page_width - 50, page_height - 50)
+            
+            last_page.insert_textbox(
+                text_rect,
+                report_text,
+                fontsize=12,
+                fontname="helv",
+                color=(0, 0, 0),
+                align=0
+            )
+            
+            output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
+            pdf_doc.save(output_pdf)
+            pdf_doc.close()
+            
+            return output_pdf
+        except Exception as e:
+            st.error(f"Error adding report to PDF: {str(e)}")
+            return None
+
     input_prompt = """
     Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
     with a deep understanding of tech field, software engineering, data science, data analysis, 
@@ -239,13 +269,18 @@ with tab2:
                                 )
                                 st.text(report_text)
 
-                                # Download Candidate Match Report
-                                st.download_button(
-                                    label="Download Candidate Match Report",
-                                    data=report_text,
-                                    file_name=f"Candidate_Match_Report_{uploaded_file.name.replace('.pdf', '')}.txt",
-                                    mime="text/plain"
-                                )
+                                # Add report to PDF and provide download
+                                enhanced_pdf_filename = add_text_to_pdf(temp_pdf_path, report_text)
+                                if enhanced_pdf_filename and os.path.exists(enhanced_pdf_filename):
+                                    with open(enhanced_pdf_filename, "rb") as file:
+                                        st.download_button(
+                                            label="Download Candidate Match Report PDF",
+                                            data=file,
+                                            file_name=f"Candidate_Match_Report_{uploaded_file.name}",
+                                            mime="application/pdf"
+                                        )
+                                else:
+                                    st.error("Failed to generate report PDF.")
 
                             except json.JSONDecodeError:
                                 st.error("There was an error parsing the model's response. Please try again.")
@@ -267,7 +302,6 @@ with tab2:
                 st.write(f"**Missing Keywords:** {result['MissingKeywords']}")
                 st.write(f"**Experience Insight:** {result['ExperienceInsight']}")
                 st.write("---")
-
 
 with tab3:
     st.subheader("HireVana 🔍")
