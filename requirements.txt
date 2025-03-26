@@ -1,0 +1,14 @@
+streamlit
+pandas
+numpy
+seaborn
+matplotlib
+scikit-learn
+serpapi
+plotly
+google-generativeai
+pdfplumber
+PyMuPDF
+altair
+python-dotenv
+requests
