@@ -172,14 +172,43 @@ with tab2:
         return ""
 
     def add_keywords_to_pdf(input_pdf, missing_keywords_text):
-        pdf_doc = fitz.open(input_pdf)
-        last_page = pdf_doc[-1]
-        text_rect = fitz.Rect(50, last_page.rect.height - 120, last_page.rect.width - 50, last_page.rect.height - 50)
-        last_page.insert_textbox(text_rect, missing_keywords_text, fontsize=12, color=(0, 0, 0))
-        output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
-        pdf_doc.save(output_pdf)
-        pdf_doc.close()
-        return output_pdf
+        try:
+            # Open the PDF
+            pdf_doc = fitz.open(input_pdf)
+            last_page = pdf_doc[-1]
+            
+            # Define the rectangle for text insertion (adjust coordinates as needed)
+            # Using a larger area and checking available space
+            page_width = last_page.rect.width
+            page_height = last_page.rect.height
+            text_rect = fitz.Rect(50, page_height - 200, page_width - 50, page_height - 20)
+            
+            # Check if there's enough space, if not, add a new page
+            if last_page.get_textbox(text_rect):
+                # If there's content in the proposed area, add a new page
+                last_page = pdf_doc.new_page()
+                text_rect = fitz.Rect(50, 50, page_width - 50, page_height - 50)
+            
+            # Insert the text with better formatting
+            last_page.insert_textbox(
+                text_rect,
+                missing_keywords_text,
+                fontsize=12,
+                fontname="helv",  # Use a common font
+                color=(0, 0, 0),  # Black color
+                align=0  # Left align
+            )
+            
+            # Save the modified PDF
+            output_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
+            pdf_doc.save(output_pdf)
+            pdf_doc.close()
+            
+            return output_pdf
+        
+        except Exception as e:
+            st.error(f"Error adding keywords to PDF: {str(e)}")
+            return None
 
     input_prompt = """
     Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
@@ -244,15 +273,22 @@ with tab2:
                                 # Enhance PDF with missing keywords
                                 missing_keywords_text = format_missing_keywords(parsed_response["MissingKeywords"])
                                 enhanced_pdf_filename = add_keywords_to_pdf(temp_pdf_path, missing_keywords_text)
+                                
+                                if enhanced_pdf_filename:
+                                    # Verify the file exists and is readable
+                                    if os.path.exists(enhanced_pdf_filename):
+                                        with open(enhanced_pdf_filename, "rb") as file:
+                                            st.download_button(
+                                                label="Download Enhanced Resume PDF",
+                                                data=file,
+                                                file_name=f"Enhanced_{uploaded_file.name}",
+                                                mime="application/pdf"
+                                            )
+                                    else:
+                                        st.error("Enhanced PDF file was not created successfully.")
+                                else:
+                                    st.error("Failed to generate enhanced PDF.")
 
-                                # Download enhanced PDF
-                                with open(enhanced_pdf_filename, "rb") as file:
-                                    st.download_button(
-                                        label="Download Enhanced Resume PDF",
-                                        data=file,
-                                        file_name=f"Enhanced_{uploaded_file.name}",
-                                        mime="application/pdf"
-                                    )
                             except json.JSONDecodeError:
                                 st.error("There was an error parsing the model's response. Please try again.")
             else:
