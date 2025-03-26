@@ -213,7 +213,8 @@ with tab2:
         st.session_state.selected_jd_recruiter = None
 
     # Sub-tabs
-    tab_recruiter = st.tabs([ "Recruiter"])
+    tab_recruiter, = st.tabs(["Recruiter"])  # Unpacking the single-element list
+
 
     with tab_recruiter:
         st.header("Recruiter")
