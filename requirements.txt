@@ -12,4 +12,5 @@ PyMuPDF
 altair
 python-dotenv
 requests
-serpapi
+google-search-results
+
