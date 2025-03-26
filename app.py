@@ -309,7 +309,7 @@ with tab3:
         try:
             response = model.generate_content(li_prompt)
             ai_response = response.text.strip()
-            json_match = re.search(r"[\s*{.}\s]", ai_response, re.DOTALL)
+            json_match = re.search(r"\[.*\]", ai_response, re.DOTALL)
             if json_match:
                 clean_json = json_match.group(0)
                 ranked_candidates = json.loads(clean_json)
@@ -317,9 +317,12 @@ with tab3:
                 raise ValueError("Invalid JSON received.")
             if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
                 raise ValueError("AI returned non-numeric scores.")
-            return sorted(ranked_candidates, key=lambda x: x["score"], reverse=True)
-        except (json.JSONDecodeError, AttributeError, ValueError):
+            if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
+                raise ValueError("AI returned non-numeric scores.")
+        except (json.JSONDecodeError, AttributeError, ValueError) as e:
+            st.error(f"❌ Error in AI ranking: {str(e)}")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
+
 
     # UI
     st.sidebar.title("🔍 AI-Powered LinkedIn Hiring")
