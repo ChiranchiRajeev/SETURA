@@ -166,37 +166,37 @@ with tab2:
                 text += page.extract_text() + "\n"
         return text
 
-    def format_recommendations(recommendations):
-        if recommendations:
-            # Limit to 15 lines
-            limited_recommendations = recommendations[:15]
-            return "\n\nRecruiter Recommendations:\n" + "\n".join([f"- {rec}" for rec in limited_recommendations])
+    def format_missing_keywords(missing_keywords):
+        if missing_keywords:
+            return "\n\nSkills: \n" + ", ".join(missing_keywords)
         return ""
 
-    def generate_recruiter_recommendations(input_pdf, recommendations_text):
+    def add_keywords_to_pdf(input_pdf, missing_keywords_text):
         try:
             # Open the PDF
             pdf_doc = fitz.open(input_pdf)
             last_page = pdf_doc[-1]
             
-            # Define the rectangle for text insertion
+            # Define the rectangle for text insertion (adjust coordinates as needed)
+            # Using a larger area and checking available space
             page_width = last_page.rect.width
             page_height = last_page.rect.height
             text_rect = fitz.Rect(50, page_height - 200, page_width - 50, page_height - 20)
             
             # Check if there's enough space, if not, add a new page
             if last_page.get_textbox(text_rect):
+                # If there's content in the proposed area, add a new page
                 last_page = pdf_doc.new_page()
                 text_rect = fitz.Rect(50, 50, page_width - 50, page_height - 50)
             
-            # Insert the recommendations text
+            # Insert the text with better formatting
             last_page.insert_textbox(
                 text_rect,
-                recommendations_text,
+                missing_keywords_text,
                 fontsize=12,
-                fontname="helv",
-                color=(0, 0, 0),
-                align=0
+                fontname="helv",  # Use a common font
+                color=(0, 0, 0),  # Black color
+                align=0  # Left align
             )
             
             # Save the modified PDF
@@ -207,21 +207,20 @@ with tab2:
             return output_pdf
         
         except Exception as e:
-            st.error(f"Error generating recommendations PDF: {str(e)}")
+            st.error(f"Error adding keywords to PDF: {str(e)}")
             return None
 
     input_prompt = """
     Hey Act Like a skilled or very experienced ATS (Application Tracking System) 
     with a deep understanding of tech field, software engineering, data science, data analysis, 
-    and big data engineering. Your task is to evaluate the resume based on the given job description 
-    from a recruiter's perspective. You must consider the job market is very competitive. 
-    Provide a percentage match based on the JD and up to 15 actionable recommendations (max 15 lines) 
-    for the recruiter, focusing on what skills or experiences are missing in the candidate 
-    and what the recruiter can expect from this candidate’s current qualifications. 
+    and big data engineering. Your task is to evaluate the resume based on the given job description. 
+    You must consider the job market is very competitive and you should provide 
+    best assistance for improving the resumes. Assign the percentage Matching based 
+    on JD and the missing keywords with high accuracy. 
     resume:{text} 
     description:{jd} 
     I want the response in one single string having the structure: 
-    {{"JD Match":"%","Recommendations":[],"Profile Summary":""}} 
+    {{"JD Match":"%","MissingKeywords":[],"Profile Summary":""}} 
     """
 
     # Initialize session state for Recruiter
@@ -269,26 +268,26 @@ with tab2:
                                 # Display results
                                 st.subheader(f"JD Match: {parsed_response['JD Match']}")
                                 st.write(f"Profile Summary: {parsed_response['Profile Summary']}")
-                                st.write(f"Recommendations: {parsed_response['Recommendations']}")
+                                st.write(f"Missing Keywords: {parsed_response['MissingKeywords']}")
 
-                                # Generate PDF with recruiter recommendations
-                                recommendations_text = format_recommendations(parsed_response["Recommendations"])
-                                enhanced_pdf_filename = generate_recruiter_recommendations(temp_pdf_path, recommendations_text)
+                                # Enhance PDF with missing keywords
+                                missing_keywords_text = format_missing_keywords(parsed_response["MissingKeywords"])
+                                enhanced_pdf_filename = add_keywords_to_pdf(temp_pdf_path, missing_keywords_text)
                                 
                                 if enhanced_pdf_filename:
                                     # Verify the file exists and is readable
                                     if os.path.exists(enhanced_pdf_filename):
                                         with open(enhanced_pdf_filename, "rb") as file:
                                             st.download_button(
-                                                label="Download Resume with Recommendations PDF",
+                                                label="Download Enhanced Resume PDF",
                                                 data=file,
-                                                file_name=f"Recommended_{uploaded_file.name}",
+                                                file_name=f"Enhanced_{uploaded_file.name}",
                                                 mime="application/pdf"
                                             )
                                     else:
-                                        st.error("Recommendations PDF file was not created successfully.")
+                                        st.error("Enhanced PDF file was not created successfully.")
                                 else:
-                                    st.error("Failed to generate recommendations PDF.")
+                                    st.error("Failed to generate enhanced PDF.")
 
                             except json.JSONDecodeError:
                                 st.error("There was an error parsing the model's response. Please try again.")
@@ -307,7 +306,7 @@ with tab2:
             for result in st.session_state.results_history_recruiter:
                 st.write(f"**JD Match:** {result['JD Match']}")
                 st.write(f"**Profile Summary:** {result['Profile Summary']}")
-                st.write(f"**Recommendations:** {result['Recommendations']}")
+                st.write(f"**Missing Keywords:** {result['MissingKeywords']}")
                 st.write("---")
 
 
