@@ -58,7 +58,7 @@ def fetch_hr_news():
 
 # Update your tab structure
 st.title("Setura🤝")
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana", "HR Pulse", "Tutorial 📺"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana", "HR Pulse", "Tutorial 📺"]
 
 
 with tab1:
