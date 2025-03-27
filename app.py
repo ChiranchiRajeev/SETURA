@@ -58,7 +58,7 @@ def fetch_hr_news():
 
 # Update your tab structure
 st.title("Setura🤝")
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana", "HR Pulse"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana", "HR Pulse", "Tutorial 📺"])
 
 
 with tab1:
@@ -503,6 +503,17 @@ with tab5:
             st.markdown(f"[{title}]({url}) - {source} ({published_at})")
     else:
         st.warning("No HR news available from the last 24 hours. Check back soon!")
+
+with tab6:
+    st.subheader("📺 Website Tutorial - Learn How to Use Setura!")
+
+    # Provide the YouTube video URL
+    youtube_video_url = "https://www.youtube.com/watch?v=oU0f0jAjp9Y"
+
+    # Embed the YouTube video in the Streamlit app
+    st.video(youtube_video_url)
+
+    st.info("👆 Click play to watch the full tutorial. If you face issues, visit the video on YouTube [here](https://www.youtube.com/watch?v=oU0f0jAjp9Y).")
 
 # Add custom CSS for minimal, professional styling
 st.markdown("""
