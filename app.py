@@ -510,12 +510,12 @@ with tab6:
     st.subheader("📺 Website Tutorial - Learn How to Use Setura!")
 
     # Provide the YouTube video URL
-    youtube_video_url = "https://www.youtube.com/watch?v=oU0f0jAjp9Y"
+    youtube_video_url = "https://youtu.be/LhpFbj3FIgI"
 
     # Embed the YouTube video in the Streamlit app
     st.video(youtube_video_url)
 
-    st.info("👆 Click play to watch the full tutorial. If you face issues, visit the video on YouTube [here](https://www.youtube.com/watch?v=oU0f0jAjp9Y).")
+    st.info("👆 Click play to watch the full tutorial. If you face issues, visit the video on YouTube [here](https://youtu.be/LhpFbj3FIgI).")
 
 # Add custom CSS for minimal, professional styling
 st.markdown("""
