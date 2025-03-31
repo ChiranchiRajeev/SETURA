@@ -12,6 +12,6 @@ PyMuPDF
 altair
 python-dotenv
 requests
-google-search-results==2.4.2
+google-search-results
 openpyxl
 
