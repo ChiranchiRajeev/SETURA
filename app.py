@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
-from google_search_results import GoogleSearch
+from serpapi import GoogleSearch
 import plotly.express as px
 import re
 import google.generativeai as genai
