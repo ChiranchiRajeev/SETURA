@@ -13,4 +13,4 @@ python-dotenv
 requests
 google-search-results
 openpyxl
-
+serpapi
