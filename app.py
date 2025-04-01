@@ -23,6 +23,9 @@ import tempfile
 import requests  # Already needed for NewsAPI
 from datetime import datetime, timedelta  # Added for date handling
 import ast
+import time  # Ensure time is imported
+import logging  # For logging errors without showing them to users
+
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
 
