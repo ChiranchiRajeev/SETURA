@@ -55,7 +55,7 @@ def fetch_hr_news():
             if response.status_code == 429:  # Rate limit error
                 if attempt < retries - 1:
                     st.warning(f"Rate limit reached. Retrying in {delay} seconds...")
-                    time.sleep(delay)
+                    time.sleep(delay)  # Delay before retrying
                     delay *= 2  # Exponential backoff
                     continue
                 else:
@@ -76,7 +76,6 @@ def fetch_hr_news():
             break  # Exit loop on network error
 
     return []  # Single return statement at the end
-
 
 # Update your tab structure
 st.title("Setura🤝")
@@ -514,19 +513,20 @@ with tab4:
 with tab5:
     st.subheader("HR Pulse 📰")
     st.write("The Very Latest News on Human Resources and HR Management")
-    
-    with st.spinner("Fetching the very latest HR news..."):
-        articles = fetch_hr_news()
 
-    if articles:
-        for article in articles:
-            title = article["title"]
-            url = article["url"]
-            published_at = article["publishedAt"][:10]  # Show date only
-            source = article["source"]["name"]
-            st.markdown(f"[{title}]({url}) - {source} ({published_at})")
-    else:
-        st.warning("No HR news available from the last 24 hours. Check back soon!")
+    if st.button("Fetch Latest HR News"):  # Only fetch when button is pressed
+        with st.spinner("Fetching the very latest HR news..."):
+            articles = fetch_hr_news()
+
+        if articles:
+            for article in articles:
+                title = article["title"]
+                url = article["url"]
+                published_at = article["publishedAt"][:10]  # Show date only
+                source = article["source"]["name"]
+                st.markdown(f"[{title}]({url}) - {source} ({published_at})")
+        else:
+            st.warning("No HR news available from the last 24 hours. Check back soon!")
 
 with tab6:
     st.subheader("📺 Website Tutorial - Learn How to Use Setura!")
