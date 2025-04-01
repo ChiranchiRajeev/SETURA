@@ -31,7 +31,9 @@ load_dotenv()
 genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
 
-# Function to fetch the very latest HR-specific news
+# Setup logging for silent error tracking
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
 def fetch_hr_news():
     url = "https://newsapi.org/v2/everything"
     from_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -52,34 +54,34 @@ def fetch_hr_news():
         try:
             response = requests.get(url, params=params, timeout=10)  # Added timeout for network issues
             response.raise_for_status()  # Raise exception for HTTP errors
-            
+
             data = response.json()
             if data.get("status") == "ok":
                 return data["articles"]  # Return articles on success
             else:
-                st.error(f"API error: {data.get('message', 'Unknown error')}")
+                logging.error(f"API error: {data.get('message', 'Unknown error')}")
                 return []  # Return empty list if API fails
-            
+
         except requests.exceptions.Timeout:
-            st.warning("Request timed out. Retrying...")
+            logging.warning("Request timed out. Retrying...")  # Log timeout error, do not show to user
         except requests.exceptions.ConnectionError:
-            st.error("Network error! Please check your internet connection.")
-            return []
+            logging.error("Network error! Please check your internet connection.")  # Log error
+            return []  # Return empty list on connection error
         except requests.exceptions.HTTPError as http_err:
             if response.status_code == 429:  # Rate limit error
                 if attempt < retries - 1:
-                    st.warning(f"Rate limit reached. Retrying in {delay} seconds...")
-                    time.sleep(delay)
+                    logging.warning(f"Rate limit reached. Retrying in {delay} seconds...")
+                    time.sleep(delay)  # Delay before retrying
                     delay *= 2  # Exponential backoff
                     continue
                 else:
-                    st.error("Too many requests! Please try again later.")
+                    logging.error("Too many requests! Please try again later.")  # Log rate limit error
             else:
-                st.error(f"HTTP error occurred: {http_err}")
-            return []
+                logging.error(f"HTTP error occurred: {http_err}")  # Log general HTTP errors
+            return []  # Return empty list on HTTP error
         except requests.exceptions.RequestException as req_err:
-            st.error(f"Unexpected error: {req_err}")
-            return []
+            logging.error(f"Unexpected error: {req_err}")  # Log other unexpected errors
+            return []  # Return empty list on general error
 
     return []  # Default return if all retries fail
 
@@ -520,6 +522,7 @@ with tab5:
     st.subheader("HR Pulse 📰")
     st.write("The Very Latest News on Human Resources and HR Management")
 
+    # Only call fetch_hr_news when button is pressed
     if st.button("Fetch Latest HR News"):  # Fetch news only when button is pressed
         with st.spinner("Fetching the very latest HR news..."):
             articles = fetch_hr_news()
