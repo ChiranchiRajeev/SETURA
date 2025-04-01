@@ -123,8 +123,6 @@ with tab1:
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     model = GradientBoostingRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
-    X_input = pd.DataFrame([[exp, edu, job, industry]], columns=["Experience", "Education", "Job Role", "Industry"])
-    y_pred = model.predict(X_test)
 
     # User Inputs
     exp = st.slider("Years of Experience", 0, 40, 5)
@@ -138,6 +136,9 @@ with tab1:
     edu_encoded = education_order.index(edu)
     job_encoded = le_job.transform([job])[0]
     industry_encoded = le_industry.transform([industry])[0]
+
+    # Create X_input dataframe after inputs
+    X_input = pd.DataFrame([[exp, edu_encoded, job_encoded, industry_encoded]], columns=["Experience", "Education", "Job Role", "Industry"])
 
     # Predict Expected Salary
     input_data = np.array([[exp, industry_encoded, job_encoded, edu_encoded, perf_score]])
@@ -170,6 +171,7 @@ with tab1:
     sns.boxplot(x=df["Industry"], y=df["Salary (Annual)"], ax=ax2)
     plt.xticks(rotation=45)
     st.pyplot(fig2)
+
 
 with tab2:
     st.subheader("ResumeFlow 📝")
