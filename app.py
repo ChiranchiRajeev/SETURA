@@ -35,7 +35,7 @@ genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 def fetch_hr_news():
     url = "https://newsapi.org/v2/everything"
     from_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    
+
     params = {
         "q": '"human resources" OR "HR managers" OR "human resource management" OR "HR in companies" OR "HR professionals" OR "corporate HR"',
         "apiKey": st.secrets["NEWS_API_KEY"],  
@@ -44,38 +44,44 @@ def fetch_hr_news():
         "from": from_date,
         "pageSize": 10
     }
-    
+
     retries = 3  # Number of retry attempts
-    delay = 5  # Initial delay in seconds
-    
+    delay = 5  # Initial retry delay
+
     for attempt in range(retries):
         try:
-            response = requests.get(url, params=params)
-
+            response = requests.get(url, params=params, timeout=10)  # Added timeout for network issues
+            response.raise_for_status()  # Raise exception for HTTP errors
+            
+            data = response.json()
+            if data.get("status") == "ok":
+                return data["articles"]  # Return articles on success
+            else:
+                st.error(f"API error: {data.get('message', 'Unknown error')}")
+                return []  # Return empty list if API fails
+            
+        except requests.exceptions.Timeout:
+            st.warning("Request timed out. Retrying...")
+        except requests.exceptions.ConnectionError:
+            st.error("Network error! Please check your internet connection.")
+            return []
+        except requests.exceptions.HTTPError as http_err:
             if response.status_code == 429:  # Rate limit error
                 if attempt < retries - 1:
                     st.warning(f"Rate limit reached. Retrying in {delay} seconds...")
-                    time.sleep(delay)  # Delay before retrying
+                    time.sleep(delay)
                     delay *= 2  # Exponential backoff
                     continue
                 else:
-                    st.error("Too many requests. Please try again later.")
-                    break  # Exit loop after retries
-
-            response.raise_for_status()
-            data = response.json()
-
-            if data.get("status") == "ok":
-                return data["articles"]
+                    st.error("Too many requests! Please try again later.")
             else:
-                st.error("Failed to fetch latest HR news: API error.")
-                break  # Exit loop on API error
+                st.error(f"HTTP error occurred: {http_err}")
+            return []
+        except requests.exceptions.RequestException as req_err:
+            st.error(f"Unexpected error: {req_err}")
+            return []
 
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error fetching latest HR news: {str(e)}")
-            break  # Exit loop on network error
-
-    return []  # Single return statement at the end
+    return []  # Default return if all retries fail
 
 # Update your tab structure
 st.title("Setura🤝")
@@ -514,7 +520,7 @@ with tab5:
     st.subheader("HR Pulse 📰")
     st.write("The Very Latest News on Human Resources and HR Management")
 
-    if st.button("Fetch Latest HR News"):  # Only fetch when button is pressed
+    if st.button("Fetch Latest HR News"):  # Fetch news only when button is pressed
         with st.spinner("Fetching the very latest HR news..."):
             articles = fetch_hr_news()
 
