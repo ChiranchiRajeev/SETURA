@@ -611,21 +611,6 @@ with tab4:
         st.write("Yes, you can filter candidates by *different hiring stages*.")
     with st.expander("📥 20. Can I download the recruitment data?"):
         st.write("Yes, you can *export and download* the candidate list in *Excel format*.")
-import plotly.express as px
-import re
-import google.generativeai as genai
-import os
-import pdfplumber
-import fitz
-import altair as alt
-from dotenv import load_dotenv
-import json
-import tempfile
-import requests  # Already needed for NewsAPI
-from datetime import datetime, timedelta  # Added for date handling
-import ast
-# Your existing setup
-st.set_page_config(page_title="Setura", layout="wide")
 
 # Load environment variables (already in your code)
 load_dotenv()
