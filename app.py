@@ -141,9 +141,10 @@ with tab1:
     X_input = pd.DataFrame([[exp, edu_encoded, job_encoded, industry_encoded]], columns=["Experience", "Education", "Job Role", "Industry"])
 
     # Predict Expected Salary
-    input_data = np.array([[exp, industry_encoded, job_encoded, edu_encoded, perf_score]])
+    input_data = pd.DataFrame([[exp, industry_encoded, job_encoded, edu_encoded, perf_score]],
+                              columns=["Experience", "Industry", "Job Role", "Education", "Performance Score"])
     predicted_salary = model.predict(input_data)[0]
-
+    
     # Calculate Fairness Score
     fairness_score = (actual_salary / predicted_salary) * 100
 
