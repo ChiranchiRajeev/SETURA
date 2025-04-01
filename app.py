@@ -34,28 +34,49 @@ genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 # Function to fetch the very latest HR-specific news
 def fetch_hr_news():
     url = "https://newsapi.org/v2/everything"
-    # Calculate the date 24 hours ago for the 'from' parameter
     from_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    
     params = {
         "q": '"human resources" OR "HR managers" OR "human resource management" OR "HR in companies" OR "HR professionals" OR "corporate HR"',
-        "apiKey": st.secrets["NEWS_API_KEY"],  # Updated to use Streamlit Secrets
+        "apiKey": st.secrets["NEWS_API_KEY"],  
         "language": "en",
         "sortBy": "publishedAt",
         "from": from_date,
         "pageSize": 10
     }
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        if data["status"] == "ok":
-            return data["articles"]
-        else:
-            st.error("Failed to fetch latest HR news: API error")
-            return []
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error fetching latest HR news: {str(e)}")
-        return []
+    
+    retries = 3  # Number of retry attempts
+    delay = 5  # Initial delay in seconds
+    
+    for attempt in range(retries):
+        try:
+            response = requests.get(url, params=params)
+
+            if response.status_code == 429:  # Rate limit error
+                if attempt < retries - 1:
+                    st.warning(f"Rate limit reached. Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    st.error("Too many requests. Please try again later.")
+                    break  # Exit loop after retries
+
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("status") == "ok":
+                return data["articles"]
+            else:
+                st.error("Failed to fetch latest HR news: API error.")
+                break  # Exit loop on API error
+
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error fetching latest HR news: {str(e)}")
+            break  # Exit loop on network error
+
+    return []  # Single return statement at the end
+
 
 # Update your tab structure
 st.title("Setura🤝")
@@ -494,9 +515,9 @@ with tab5:
     st.subheader("HR Pulse 📰")
     st.write("The Very Latest News on Human Resources and HR Management")
     
-    # Fetch and display the latest HR-specific news
     with st.spinner("Fetching the very latest HR news..."):
         articles = fetch_hr_news()
+
     if articles:
         for article in articles:
             title = article["title"]
