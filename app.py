@@ -137,12 +137,9 @@ with tab1:
     job_encoded = le_job.transform([job])[0]
     industry_encoded = le_industry.transform([industry])[0]
 
-    # Create X_input dataframe after inputs
-    X_input = pd.DataFrame([[exp, edu_encoded, job_encoded, industry_encoded]], columns=["Experience", "Education", "Job Role", "Industry"])
-
     # Predict Expected Salary
     input_data = pd.DataFrame([[exp, industry_encoded, job_encoded, edu_encoded, perf_score]],
-                              columns=["Experience", "Industry", "Job Role", "Education", "Performance Score"])
+                              columns=["Years of Experience", "Industry", "Job Role", "Education Level", "Performance Score"])
     predicted_salary = model.predict(input_data)[0]
     
     # Calculate Fairness Score
