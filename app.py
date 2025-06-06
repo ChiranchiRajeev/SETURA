@@ -25,6 +25,7 @@ from datetime import datetime, timedelta  # Added for date handling
 import ast
 import time  # Ensure time is imported
 import logging  # For logging errors without showing them to users
+from google.api_core.exceptions import ResourceExhausted
 
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
@@ -188,11 +189,14 @@ with tab2:
                 clean_json = json_match.group(0)
                 return json.loads(clean_json) if isinstance(clean_json, str) else clean_json
             return ai_text
+        except ResourceExhausted as re:
+            st.error("API quota exceeded. Please wait a few minutes and try again, or consider upgrading your plan at https://ai.google.dev/gemini-api/docs/rate-limits.")
+            return None
         except json.JSONDecodeError:
             st.error("Error parsing AI's JSON response. Please try again.")
             return None
         except Exception as e:
-            st.error(f"Unexpected error: {str(e)}")
+            st.error("An unexpected error occurred. Please try again later.")
             return None
 
     def extract_text_with_layout(uploaded_file):
