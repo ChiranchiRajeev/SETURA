@@ -94,7 +94,7 @@ def fetch_hr_news():
 st.title("Setura🤝")
 st.markdown(
     '<p style="color:red; font-weight:bold; display:inline;">Caution:</p>'
-    '<span style="color:black; font-size:0.9em;"> Some tabs may only work partially due to API limit considerations. To see the actual working of the app, refer to the Tutorial tab. Sorry for the inconvenience.</span>',
+    '<span style="font-size:0.9em;"> Some tabs may only work partially due to API limit considerations. To see the actual working of the app, refer to the Tutorial tab. Sorry for the inconvenience.</span>',
     unsafe_allow_html=True
 )
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
