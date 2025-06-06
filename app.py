@@ -339,6 +339,10 @@ with tab2:
                 st.write(f"**Experience Insight:** {result['ExperienceInsight']}")
                 st.write("---")
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 with tab3:
     st.subheader("HireVana 🔍")
 
@@ -371,89 +375,100 @@ with tab3:
     def rank_candidates_linkedin(hr_requirement, candidates):
         model = genai.GenerativeModel("gemini-1.5-pro-latest")
 
+        # Limit to top 10 candidates to reduce API load
+        candidates = candidates[:10]
         candidate_texts = "\n".join([
-            f"- Name: {c['name']}\n  LinkedIn: {c['linkedin']}\n  Experience: {c.get('experience', 'N/A')}\n  Skills: {', '.join(c.get('skills', []))}"
+            f"- Name: {c['name']}\n  Experience: {c.get('experience', 'N/A')}\n  Skills: {', '.join(c.get('skills', []))}"
             for c in candidates
         ])
 
         li_prompt = f"""
-        You are an AI recruitment assistant. Your job is to evaluate and rank LinkedIn candidates based on their experience, skills, and relevance to the job requirement.
+        You are an AI recruitment assistant. Evaluate and rank LinkedIn candidates based on their experience, skills, and relevance to the job requirement.
 
-        ### *Job Requirement:*
+        ### Job Requirement:
         {hr_requirement}
 
-        ### *Candidates to Rank:*
+        ### Candidates to Rank:
         {candidate_texts}
 
-        ### *Scoring Criteria:*
-        - Give a score between **1 and 10** (10 = Best match, 1 = Weak match).
-        - *Experience:* More relevant years = Higher score.
-        - *Skills Match:* More matching skills = Higher score.
-        - *Role Alignment:* If past jobs match the requirement, increase score.
+        ### Scoring Criteria:
+        - Score between 1 and 10 (10 = Best match, 1 = Weak match).
+        - Experience: More relevant years = Higher score.
+        - Skills Match: More matching skills = Higher score.
+        - Role Alignment: If past jobs match the requirement, increase score.
 
-        🚨 Return **ONLY valid JSON** in this format:
-        ```json
+        Return ONLY valid JSON in this format:
         [
             {{"name": "Alice Johnson", "linkedin": "https://www.linkedin.com/in/alicejohnson", "score": 9.5}},
             {{"name": "Bob Smith", "linkedin": "https://www.linkedin.com/in/bobsmith", "score": 8.2}}
         ]
-        ```
+        Ensure no extra text or markdown is included.
         """
 
         @retry.Retry(
             predicate=retry.if_exception_type(google.api_core.exceptions.ResourceExhausted),
             initial=1.0,
-            maximum=60.0,
+            maximum=30.0,
             multiplier=2.0,
-            timeout=300.0
+            timeout=120.0
         )
         def call_generate_content():
+            time.sleep(1)  # Delay to respect rate limits
             return model.generate_content(li_prompt)
 
         try:
+            start_time = time.time()
             response = call_generate_content()
+            logger.info(f"API call took {time.time() - start_time:.2f} seconds")
 
             # Validate AI Response Before Processing
             if not response or not hasattr(response, "text") or not response.text.strip():
-                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                st.error("❌ AI returned an empty response. Please try again later or check your API quota.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             ai_response = response.text.strip()
+            logger.info(f"AI Response: {ai_response}")
 
-            # Debug: Print AI response to check JSON format
-            print("AI Response:", ai_response)
-
-            # Extract JSON Data from AI Response
-            json_match = re.search(r"\[.*\]", ai_response, re.DOTALL)
-            if json_match:
-                clean_json = json_match.group(0).strip()
-                try:
-                    ranked_candidates = ast.literal_eval(clean_json)  # Safer than json.loads()
-                
-                except (SyntaxError, ValueError) as e:
-                    st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
-                    return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
-            else:
-                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+            # Extract and parse JSON
+            try:
+                ranked_candidates = json.loads(ai_response)
+            except json.JSONDecodeError as e:
+                st.error(f"❌ Invalid JSON format from AI: {str(e)}. Please try again.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure AI response is a list
             if not isinstance(ranked_candidates, list):
-                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                st.error("❌ AI response is not a valid list. Please try again.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure all candidates have valid numeric scores
             if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
-                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                st.error("❌ AI returned non-numeric scores. Please try again.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
+
+            # Ensure all candidates have matching LinkedIn URLs
+            for ranked in ranked_candidates:
+                if not any(c["linkedin"] == ranked["linkedin"] for c in candidates):
+                    st.error("❌ AI returned mismatched candidate data. Please try again.")
+                    return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             return sorted(ranked_candidates, key=lambda x: x["score"], reverse=True)
 
-        except google.api_core.exceptions.ResourceExhausted:
-            st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+        except google.api_core.exceptions.ResourceExhausted as e:
+            st.error("❌ API quota exceeded. Please try again later or check your Gemini API quota at https://makersuite.google.com.")
+            logger.error(f"ResourceExhausted error: {str(e)}")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
-        except (json.JSONDecodeError, AttributeError, ValueError):
-            st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+        except AttributeError as e:
+            st.error(f"❌ Invalid AI response format: {str(e)}. Please try again.")
+            logger.error(f"AttributeError: {str(e)}")
+            return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
+        except ValueError as e:
+            st.error(f"❌ Error processing AI response: {str(e)}. Please try again.")
+            logger.error(f"ValueError: {str(e)}")
+            return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
+        except Exception as e:
+            st.error(f"❌ Unexpected error: {str(e)}. Please try again or contact support.")
+            logger.error(f"Unexpected error: {str(e)}")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
     # UI: Sidebar Search & Ranking
@@ -477,8 +492,11 @@ with tab3:
         if "candidates" not in st.session_state or not st.session_state.candidates:
             st.error("Please search for candidates first!")
         else:
+            status = st.empty()
             with st.spinner("Ranking candidates..."):
+                status.text("Fetching AI response...")
                 ranked_candidates = rank_candidates_linkedin(hr_requirement, st.session_state.candidates)
+                status.text("Processing results...")
 
                 if not ranked_candidates:
                     st.warning("AI could not rank candidates. Try again.")
@@ -492,6 +510,7 @@ with tab3:
                     st.write("### 📊 LinkedIn Candidate Rankings")
                     st.dataframe(df.style.format({"Score": "{:.2f}"}).highlight_max(axis=0))
                     st.info("🎯 This tool fetches LinkedIn candidates via Google Search & ranks them using AI.")
+                    status.empty()
 
 
 
