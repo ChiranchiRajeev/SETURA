@@ -1,4 +1,3 @@
-
 # Add these imports at the top of your script with your other imports
 import streamlit as st
 import pandas as pd
@@ -410,7 +409,7 @@ with tab3:
             initial=1.0,
             maximum=30.0,
             multiplier=2.0,
-            timeout=120.0
+            timeout=100.0
         )
         def call_generate_content():
             time.sleep(1)  # Delay to respect rate limits
@@ -423,7 +422,7 @@ with tab3:
 
             # Validate AI Response Before Processing
             if not response or not hasattr(response, "text") or not response.text.strip():
-                st.error("❌ AI returned an empty response. Please try again later or check your API quota.")
+                st.error("Apologies, the AI returned an empty response — please try again later or check the **Tutorial** tab.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             ai_response = response.text.strip()
@@ -432,42 +431,42 @@ with tab3:
             # Extract and parse JSON
             try:
                 ranked_candidates = json.loads(ai_response)
-            except json.JSONDecodeError as e:
-                st.error(f"❌ Invalid JSON format from AI: {str(e)}. Please try again.")
+            except json.JSONDecodeError:
+                st.error("Apologies, the AI returned invalid data — please try again later or check the **Tutorial** tab.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure AI response is a list
             if not isinstance(ranked_candidates, list):
-                st.error("❌ AI response is not a valid list. Please try again.")
+                st.error("Apologies, the AI response is invalid — please try again later or check the **Tutorial** tab.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure all candidates have valid numeric scores
             if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
-                st.error("❌ AI returned non-numeric scores. Please try again.")
+                st.error("Apologies, the AI returned invalid scores — please try again later or check the **Tutorial** tab.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure all candidates have matching LinkedIn URLs
             for ranked in ranked_candidates:
                 if not any(c["linkedin"] == ranked["linkedin"] for c in candidates):
-                    st.error("❌ AI returned mismatched candidate data. Please try again.")
+                    st.error("Apologies, the AI returned mismatched candidate data — please try again later or check the **Tutorial** tab.")
                     return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             return sorted(ranked_candidates, key=lambda x: x["score"], reverse=True)
 
-        except google.api_core.exceptions.ResourceExhausted as e:
-            st.error("❌ API quota exceeded. Please try again later or check your Gemini API quota at https://makersuite.google.com.")
-            logger.error(f"ResourceExhausted error: {str(e)}")
+        except google.api_core.exceptions.ResourceExhausted:
+            st.error("Apologies, you've hit the API usage limit — please try again later or check the **Tutorial** tab.")
+            logger.error("ResourceExhausted: API quota exceeded")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
-        except AttributeError as e:
-            st.error(f"❌ Invalid AI response format: {str(e)}. Please try again.")
-            logger.error(f"AttributeError: {str(e)}")
+        except AttributeError:
+            st.error("Apologies, an error occurred with the AI response — please try again later or check the **Tutorial** tab.")
+            logger.error("AttributeError: Invalid AI response format")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
-        except ValueError as e:
-            st.error(f"❌ Error processing AI response: {str(e)}. Please try again.")
-            logger.error(f"ValueError: {str(e)}")
+        except ValueError:
+            st.error("Apologies, an error occurred processing the AI response — please try again later or check the **Tutorial** tab.")
+            logger.error("ValueError: Invalid data processing")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
         except Exception as e:
-            st.error(f"❌ Unexpected error: {str(e)}. Please try again or contact support.")
+            st.error("Apologies, an unexpected error occurred — please try again later or check the **Tutorial** tab.")
             logger.error(f"Unexpected error: {str(e)}")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
