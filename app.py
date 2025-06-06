@@ -598,14 +598,14 @@ with tab6:
 
 # Function to display General Questions (to avoid repetition)
 def display_general_questions():
-    st.header("General Questions", divider="grey")
+    st.markdown("### General Questions")
     with st.expander("🌟 1. What is Setura?"):
         st.write("Setura is a multi-functional web app with four main tools: *JustScale* (salary prediction and fairness analysis), *ResumeFlow* (AI-powered resume analysis and job matching), *HireVana* (LinkedIn profile searching and ranking), and *TrackVana* (a recruitment pipeline tracker).")
     with st.expander("👥 2. Who can use Setura?"):
         st.write("- *Job Seekers* looking to analyze their resumes.\n- *Employers & HR professionals* for hiring and recruitment tracking.\n- *Employees* to check if their salary is fair.\n- *Recruiters* for LinkedIn candidate searches.")
 
-# Main title using Streamlit's native header
-st.title("Frequently Asked Questions (FAQs)")
+# Main title with smaller heading
+st.markdown("## Frequently Asked Questions (FAQs)")
 
 # Create tabs for each app
 tab1, tab2, tab3, tab4 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana"])
@@ -613,7 +613,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackV
 # JustScale Tab
 with tab1:
     display_general_questions()
-    st.header("JustScale (Salary Prediction)", divider="grey")
+    st.markdown("### JustScale (Salary Prediction)")
     with st.expander("📈 3. How does JustScale predict salaries?"):
         st.write("It uses *machine learning* to analyze your experience, education, industry, job role, and performance score to estimate a fair salary.")
     with st.expander("⚖ 4. What is the Fairness Score?"):
@@ -626,7 +626,7 @@ with tab1:
 # ResumeFlow Tab
 with tab2:
     display_general_questions()
-    st.header("ResumeFlow (AI Resume Analysis)", divider="grey")
+    st.markdown("### ResumeFlow (AI Resume Analysis)")
     with st.expander("🤖 7. How does ResumeFlow help job seekers?"):
         st.write("- It scans your *resume* and *job description*.\n- It checks **matching percentage** and *missing keywords*.\n- It suggests **improvements** to boost your job chances.")
     with st.expander("📄 8. What file format should I use for my resume?"):
@@ -634,14 +634,14 @@ with tab2:
     with st.expander("⬇ 9. Can I download my improved resume?"):
         st.write("Yes, ResumeFlow *adds missing keywords* to your resume and lets you *download the enhanced version*.")
     with st.expander("📊 10. How is the JD (Job Description) match percentage calculated?"):
-        st.write("The AI compares *your skills, experience, and keywords* to the job description and assigns a *match percentage*.")
+        st.write("AThe AI compares *your skills, experience, and keywords* to the job description and assigns a *match percentage*.")
     with st.expander("🔑 11. What are missing keywords?"):
         st.write("These are *important skills* or *keywords* in the job description that are missing in your resume. Adding them improves your chances of getting selected.")
 
 # HireVana Tab
 with tab3:
     display_general_questions()
-    st.header("HireVana (LinkedIn Profile Search & Ranking)", divider="grey")
+    st.markdown("### HireVana (LinkedIn Profile Search & Ranking)")
     with st.expander("🔍 12. How does HireVana find LinkedIn profiles?"):
         st.write("It uses *Google Search API* to find *LinkedIn profiles* based on your *job title and keywords*.")
     with st.expander("🏅 13. How does it rank candidates?"):
@@ -654,7 +654,7 @@ with tab3:
 # TrackVana Tab
 with tab4:
     display_general_questions()
-    st.header("TrackVana (Recruitment Tracker)", divider="grey")
+    st.markdown("### TrackVana (Recruitment Tracker)")
     with st.expander("📋 16. What is TrackVana?"):
         st.write("It is a *recruitment tracking tool* for HR teams to *manage hiring stages*.")
     with st.expander("📊 17. What data can I track?"):
