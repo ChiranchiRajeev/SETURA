@@ -596,40 +596,16 @@ with tab6:
 
     st.info("👆 Click play to watch the full tutorial. If you face issues, visit the video on YouTube [here](https://youtu.be/LhpFbj3FIgI).")
 
-# Add custom CSS for minimal, professional styling
-st.markdown("""
-    <style>
-        .faq-title {
-            font-size: 28px;
-            font-weight: bold;
-            text-align: center;
-            color: #333333;  /* Dark gray for professionalism */
-            margin-bottom: 20px;
-        }
-        .faq-box {
-            background-color: #f9f9f9;  /* Light gray for subtle background */
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.05);  /* Softer shadow */
-            margin-bottom: 10px;
-        }
-        .section-title {
-            font-size: 22px;
-            font-weight: bold;
-            color: #4A636E;  /* Muted teal for subtle emphasis */
-            margin-top: 20px;
-        }
-    </style>
-    <div class="faq-title">Frequently Asked Questions (FAQs)</div>
-""", unsafe_allow_html=True)
-
 # Function to display General Questions (to avoid repetition)
 def display_general_questions():
-    st.markdown('<div class="section-title">General Questions</div>', unsafe_allow_html=True)
+    st.header("General Questions", divider="grey")
     with st.expander("🌟 1. What is Setura?"):
         st.write("Setura is a multi-functional web app with four main tools: *JustScale* (salary prediction and fairness analysis), *ResumeFlow* (AI-powered resume analysis and job matching), *HireVana* (LinkedIn profile searching and ranking), and *TrackVana* (a recruitment pipeline tracker).")
     with st.expander("👥 2. Who can use Setura?"):
         st.write("- *Job Seekers* looking to analyze their resumes.\n- *Employers & HR professionals* for hiring and recruitment tracking.\n- *Employees* to check if their salary is fair.\n- *Recruiters* for LinkedIn candidate searches.")
+
+# Main title using Streamlit's native header
+st.title("Frequently Asked Questions (FAQs)")
 
 # Create tabs for each app
 tab1, tab2, tab3, tab4 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackVana"])
@@ -637,22 +613,22 @@ tab1, tab2, tab3, tab4 = st.tabs(["JustScale", "ResumeFlow", "HireVana", "TrackV
 # JustScale Tab
 with tab1:
     display_general_questions()
-    st.markdown('<div class="section-title">JustScale (Salary Prediction)</div>', unsafe_allow_html=True)
+    st.header("JustScale (Salary Prediction)", divider="grey")
     with st.expander("📈 3. How does JustScale predict salaries?"):
         st.write("It uses *machine learning* to analyze your experience, education, industry, job role, and performance score to estimate a fair salary.")
     with st.expander("⚖ 4. What is the Fairness Score?"):
-        st.write("Fairness Score compares your *actual salary* to the *predicted salary:\n- **Below 90%: You might be **underpaid.\n- **90% - 110%: Your salary is **fair.\n- **Above 110%: You might be **overpaid*.")
+        st.write("Fairness Score compares your *actual salary* to the *predicted salary*:\n- **Below 90%**: You might be **underpaid**.\n- **90% - 110%**: Your salary is **fair**.\n- **Above 110%**: You might be **overpaid**.")
     with st.expander("✅ 5. Can I trust the salary prediction?"):
-        st.write("Yes, the model is trained on *real-world salary data, but salaries depend on various factors. This is an **estimated prediction*, not an exact value.")
+        st.write("Yes, the model is trained on *real-world salary data*, but salaries depend on various factors. This is an **estimated prediction**, not an exact value.")
     with st.expander("💵 6. Why do I need to enter my actual salary?"):
         st.write("Your salary is used to calculate *Fairness Score*, helping you understand if you are being paid fairly.")
 
 # ResumeFlow Tab
 with tab2:
     display_general_questions()
-    st.markdown('<div class="section-title">ResumeFlow (AI Resume Analysis)</div>', unsafe_allow_html=True)
+    st.header("ResumeFlow (AI Resume Analysis)", divider="grey")
     with st.expander("🤖 7. How does ResumeFlow help job seekers?"):
-        st.write("- It scans your *resume* and *job description.\n- It checks **matching percentage* and *missing keywords.\n- It suggests **improvements* to boost your job chances.")
+        st.write("- It scans your *resume* and *job description*.\n- It checks **matching percentage** and *missing keywords*.\n- It suggests **improvements** to boost your job chances.")
     with st.expander("📄 8. What file format should I use for my resume?"):
         st.write("Only *PDF files* are supported.")
     with st.expander("⬇ 9. Can I download my improved resume?"):
@@ -665,11 +641,11 @@ with tab2:
 # HireVana Tab
 with tab3:
     display_general_questions()
-    st.markdown('<div class="section-title">HireVana (LinkedIn Profile Search & Ranking)</div>', unsafe_allow_html=True)
+    st.header("HireVana (LinkedIn Profile Search & Ranking)", divider="grey")
     with st.expander("🔍 12. How does HireVana find LinkedIn profiles?"):
         st.write("It uses *Google Search API* to find *LinkedIn profiles* based on your *job title and keywords*.")
     with st.expander("🏅 13. How does it rank candidates?"):
-        st.write("- AI checks *skills, experience, and job match.\n- Candidates are ranked from **1 to 10* (10 = Best Match).")
+        st.write("- AI checks *skills, experience, and job match*.\n- Candidates are ranked from **1 to 10** (10 = Best Match).")
     with st.expander("❓ 14. Why are some LinkedIn profiles missing?"):
         st.write("Google might not list all LinkedIn profiles. Try different *keywords* for better results.")
     with st.expander("📬 15. Can I contact LinkedIn candidates directly?"):
@@ -678,11 +654,11 @@ with tab3:
 # TrackVana Tab
 with tab4:
     display_general_questions()
-    st.markdown('<div class="section-title">TrackVana (Recruitment Tracker)</div>', unsafe_allow_html=True)
+    st.header("TrackVana (Recruitment Tracker)", divider="grey")
     with st.expander("📋 16. What is TrackVana?"):
         st.write("It is a *recruitment tracking tool* for HR teams to *manage hiring stages*.")
     with st.expander("📊 17. What data can I track?"):
-        st.write("- *Candidate Name\n- **Email\n- **Application Date\n- **Current Hiring Stage\n- **Notes\n- **Phone Number*")
+        st.write("- *Candidate Name*\n- *Email*\n- *Application Date*\n- *Current Hiring Stage*\n- *Notes*\n- *Phone Number*")
     with st.expander("🔄 18. Can I update the candidate's hiring stage?"):
         st.write("Yes, you can *move candidates between stages* (Applied, Interviewed, Hired, etc.).")
     with st.expander("🔎 19. Can I filter candidates by stage?"):
