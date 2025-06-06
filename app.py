@@ -26,6 +26,7 @@ import ast
 import time  # Ensure time is imported
 import logging  # For logging errors without showing them to users
 from google.api_core.exceptions import ResourceExhausted
+from google.api_core import retry
 
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
@@ -190,7 +191,7 @@ with tab2:
                 return json.loads(clean_json) if isinstance(clean_json, str) else clean_json
             return ai_text
         except ResourceExhausted as re:
-            st.error("API quota exceeded. Please wait a few minutes and try again, or consider upgrading your plan at https://ai.google.dev/gemini-api/docs/rate-limits.")
+            st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
             return None
         except json.JSONDecodeError:
             st.error("Error parsing AI's JSON response. Please try again.")
@@ -345,7 +346,6 @@ with tab3:
     SERPAPI_KEY = st.secrets["SERPAPI_KEY"]
     
     # Configure Gemini AI
-    import google.generativeai as genai
     genai.configure(api_key=GEMINI_API_KEY_LI)
 
     # Function to Search LinkedIn Profiles
@@ -399,12 +399,22 @@ with tab3:
         ```
         """
 
+        @retry.Retry(
+            predicate=retry.if_exception_type(google.api_core.exceptions.ResourceExhausted),
+            initial=1.0,
+            maximum=60.0,
+            multiplier=2.0,
+            timeout=300.0
+        )
+        def call_generate_content():
+            return model.generate_content(li_prompt)
+
         try:
-            response = model.generate_content(li_prompt)
+            response = call_generate_content()
 
             # Validate AI Response Before Processing
             if not response or not hasattr(response, "text") or not response.text.strip():
-                st.error("❌ AI returned an empty response. Please try again.")
+                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
                 return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             ai_response = response.text.strip()
@@ -420,23 +430,29 @@ with tab3:
                     ranked_candidates = ast.literal_eval(clean_json)  # Safer than json.loads()
                 
                 except (SyntaxError, ValueError) as e:
-                    raise ValueError(f"❌ AI returned invalid JSON format: {e}")
+                    st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                    return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
             else:
-                raise ValueError("Invalid JSON received from AI.")
-                
+                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure AI response is a list
             if not isinstance(ranked_candidates, list):
-                raise ValueError("AI response is not a list.")
+                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             # Ensure all candidates have valid numeric scores
             if not all(isinstance(c.get("score"), (int, float)) for c in ranked_candidates):
-                raise ValueError("AI returned non-numeric scores.")
+                st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+                return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
             return sorted(ranked_candidates, key=lambda x: x["score"], reverse=True)
 
-        except (json.JSONDecodeError, AttributeError, ValueError) as e:
-            st.error(f"❌ Error in AI ranking: {str(e)}")
+        except google.api_core.exceptions.ResourceExhausted:
+            st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
+            return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
+        except (json.JSONDecodeError, AttributeError, ValueError):
+            st.error("Apologies, you've hit the usage limit — please try again later or check the **Tutorial** tab to see the working.")
             return [{"name": c["name"], "linkedin": c["linkedin"], "score": 5.0} for c in candidates]
 
     # UI: Sidebar Search & Ranking
