@@ -27,6 +27,7 @@ import time  # Ensure time is imported
 import logging  # For logging errors without showing them to users
 from google.api_core.exceptions import ResourceExhausted
 from google.api_core import retry
+import google.api_core.exceptions 
 
 # Your existing setup
 st.set_page_config(page_title="Setura", layout="wide")
