@@ -15,4 +15,3 @@ google-search-results
 openpyxl
 serpapi==0.1.5
 google-api-core>=2.11.0
-google-search-results
